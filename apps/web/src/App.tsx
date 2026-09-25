@@ -80,7 +80,7 @@ const NotificationPreferencesPage = lazyLoad(() => import('@/pages/settings/noti
 const SupportTicketsPage = lazyLoad(() => import('@/pages/support/support-tickets-page'))
 const SupportTicketDetailPage = lazyLoad(() => import('@/pages/support/ticket-detail-page'))
 const NotificationsPage = lazyLoad(() => import('@/pages/notifications-page'))
-const DocsComingSoonPage = lazyLoad(() => import('@/pages/docs-coming-soon-page'))
+const DocsPage = lazyLoad(() => import('@/pages/docs/docs-page'))
 
 import InvitePage from '@/pages/invite-page'
 import StatusPage from '@/pages/status-page'
@@ -114,8 +114,7 @@ export function App() {
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/status" element={<StatusPage />} />
             <Route path="/widget/demo" element={<WidgetDemoPage />} />
-            <Route path="/docs" element={<DocsComingSoonPage />} />
-            <Route path="/docs/*" element={<Navigate to="/docs" replace />} />
+            <Route path="/docs/*" element={<DocsPage />} />
             <Route element={<ErrorBoundary name="Dashboard"><DashboardLayout /></ErrorBoundary>}>
             <Route path="/dashboard" element={<DashboardOverviewPage />} />
               <Route path="/dashboard/analytics" element={<AnalyticsPage />} />

@@ -1,11 +1,24 @@
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
+import { buildLlmsFiles } from "./scripts/llms-txt"
+
+// llms.txt / llms-full.txt for AI crawlers. Runs inside the bundler so it fires on
+// every build path — vercel.json calls `vite build` directly, bypassing npm scripts.
+function llmsTxt(): Plugin {
+  return {
+    name: "llms-txt",
+    apply: "build",
+    closeBundle() {
+      buildLlmsFiles(path.resolve(__dirname, "dist"))
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [llmsTxt(), react(), tailwindcss()],
   envDir: ".",
   resolve: {
     alias: {
