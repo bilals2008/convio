@@ -21,28 +21,25 @@ function walk(dir: string): string[] {
 function parse(path: string, raw: string): DocFile {
   const slug = relative(CONTENT_DIR, path).replace(/\.md$/, "").split(sep).join("/")
   const title = /^#\s+(.+)$/m.exec(raw)?.[1]?.trim() ?? slug
-  const description =
+  const firstLine =
     raw
       .split("\n")
       .map((line) => line.trim())
       .find((line) => line && !line.startsWith("#") && !line.startsWith("```")) ?? ""
+  const description = firstLine
+    .replace(/[*_`>]/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 160)
+    .trim()
 
   return { slug, url: `${BASE_URL}/docs${slug ? `/${slug}` : ""}`, title, description, body: raw }
 }
 
-const humanize = (value: string) =>
-  value
-    .replace(/[-/]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-
 /** Writes llms.txt (link index) and llms-full.txt (whole corpus) for AI crawlers. */
 export function buildLlmsFiles(outDir: string): void {
-  const docs = walk(CONTENT_DIR).map((path) => parse(path, readFileSync(path, "utf8")))
-
-  const sections = docs.reduce<Map<string, DocFile[]>>((map, doc) => {
-    const section = doc.slug.includes("/") ? doc.slug.split("/")[0] : "Overview"
-    return map.set(section, [...(map.get(section) ?? []), doc])
-  }, new Map())
+  const docs = walk(CONTENT_DIR)
+    .map((path) => parse(path, readFileSync(path, "utf8")))
+    .sort((a, b) => a.slug.localeCompare(b.slug))
 
   const index = [
     "# Convio",
@@ -53,13 +50,10 @@ export function buildLlmsFiles(outDir: string): void {
     "",
   ]
 
-  for (const [section, sectionDocs] of sections) {
-    index.push(`### ${humanize(section)}`, "")
-    for (const doc of sectionDocs) {
-      index.push(`- [${doc.title}](${doc.url})${doc.description ? `: ${doc.description}` : ""}`)
-    }
-    index.push("")
+  for (const doc of docs) {
+    index.push(`- [${doc.title}](${doc.url})${doc.description ? `: ${doc.description}` : ""}`)
   }
+  index.push("")
 
   const full = docs
     .map((doc) => `<!-- ${doc.url} -->\n\n${doc.body.trim()}`)

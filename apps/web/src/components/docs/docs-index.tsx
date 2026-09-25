@@ -1,80 +1,82 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Rocket } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { DocsShell } from '@/components/docs/docs-shell'
-import { Badge } from '@/components/ui/badge'
-import { docSections } from '@/lib/docs/nav'
-import { cn } from '@/lib/utils'
+import { docPages } from '@/lib/docs/nav'
 
-const CARDS = [
-  { title: 'What is Convio?', body: 'The platform, its core concepts, and where it fits.', section: 'Getting Started' },
-  { title: 'Creating an organization', body: 'Workspaces, members, and roles.', section: 'Getting Started' },
-  { title: 'Roles and permissions', body: 'What each role can and cannot touch.', section: 'Organizations' },
-  { title: 'Managing members', body: 'Roles, removals, and what survives.', section: 'Organizations' },
-  { title: 'Login activity & sessions', body: 'Where you have signed in, and how to cut access.', section: 'Organizations' },
-  { title: 'What is an AI agent?', body: 'Agent, model, and bot — and how they differ.', section: 'AI Agents' },
-  { title: 'Writing system prompts', body: 'The highest-leverage field you own.', section: 'AI Agents' },
-  { title: 'Choosing a model', body: 'Every provider, and which one to pick.', section: 'AI Agents' },
-  { title: 'Tools & capabilities', body: 'Let the agent do things, not just say them.', section: 'AI Agents' },
-  { title: 'Knowledge bases', body: 'Upload documents and connect external sources.', section: 'Knowledge Bases' },
-  { title: 'Channels', body: 'Publish agents to the web and beyond.', section: 'Channels' },
-  { title: 'Billing', body: 'Plans, usage limits, and invoices.', section: 'Billing' },
+const BLURBS: Record<string, string> = {
+  'getting-started': 'Account, organization, team, dashboard, and the full vocabulary.',
+  agents: 'Concepts, creating, model choice, tools, testing, and statuses.',
+  'system-prompts': 'The highest-leverage field you own, with worked examples.',
+  'knowledge-bases': 'Ground answers in your documents instead of the model’s memory.',
+  channels: 'Deploy to the web widget, WhatsApp, Slack, Telegram, Discord, and SMS.',
+  billing: 'How token usage is metered, plans, trials, and keeping costs predictable.',
+}
+
+const STEPS = [
+  { n: '01', title: 'Create an account and an organization', body: 'An organization is the workspace boundary — agents, knowledge, keys, and billing all live inside one.' },
+  { n: '02', title: 'Create your first agent', body: 'Name it, pick a model, write a system prompt. Start from a template or blank.' },
+  { n: '03', title: 'Test it in the playground', body: 'It runs your real prompt, model, and knowledge — without touching production.' },
+  { n: '04', title: 'Set it active and deploy', body: 'Draft agents accept nothing. Once it answers in production, you are live.' },
 ]
-
-const firstPageOf = (section: string) => docSections.find((s) => s.title === section)?.pages[0]
 
 export function DocsIndex() {
   return (
     <DocsShell>
-      <div className="max-w-[42rem]">
-        <h1 className="font-heading text-3xl font-semibold tracking-tight">Convio Documentation</h1>
-        <p className="mt-3 text-muted-foreground">
-          Everything you need to build, deploy, and scale AI agents across every channel.
+      <div className="max-w-[46rem]">
+        <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
+          Convio Documentation
+        </h1>
+        <p className="mt-4 text-lg text-muted-foreground">
+          Convio is an open-source platform for building, deploying, and scaling AI agents across
+          every channel. One agent definition, many places to reach people.
         </p>
 
-        <ul className="mt-10 grid gap-3 sm:grid-cols-2">
-          {CARDS.map(({ title, body, section }) => {
-            const target = firstPageOf(section)
-            const inner = (
-              <>
-                <span className="flex items-center gap-2 font-medium">
-                  {title}
-                  {target ? (
-                    <ArrowRight className="ml-auto size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                  ) : (
-                    <Badge variant="soon" className="ml-auto">
-                      Soon
-                    </Badge>
-                  )}
+        <div className="mt-8 rounded-lg border border-border bg-muted/40 p-5">
+          <p className="text-sm font-medium">New here? Four steps to a live agent.</p>
+          <ol className="mt-4 space-y-4">
+            {STEPS.map((step) => (
+              <li key={step.n} className="flex gap-4">
+                <span className="font-mono text-xs text-muted-foreground">{step.n}</span>
+                <span>
+                  <span className="text-sm font-medium">{step.title}</span>
+                  <span className="mt-0.5 block text-sm text-muted-foreground">{step.body}</span>
                 </span>
-                <span className="text-sm text-muted-foreground">{body}</span>
-              </>
-            )
-            const className =
-              'group flex h-full flex-col gap-2 rounded-lg border border-border p-4'
-
-            return (
-              <li key={title}>
-                {target ? (
-                  <Link
-                    to={target.slug ? `/docs/${target.slug}` : '/docs'}
-                    className={cn(className, 'transition-colors hover:border-primary/40 hover:bg-muted/50')}
-                  >
-                    {inner}
-                  </Link>
-                ) : (
-                  <div className={cn(className, 'opacity-60')}>{inner}</div>
-                )}
               </li>
-            )
-          })}
+            ))}
+          </ol>
+        </div>
+
+        <h2 className="mt-14 font-heading text-lg font-semibold tracking-tight">Documentation</h2>
+        <ul className="mt-4 divide-y divide-border border-y border-border">
+          {docPages
+            .filter((page) => page.slug !== '')
+            .map((page) => (
+              <li key={page.slug}>
+                <Link
+                  to={`/docs/${page.slug}`}
+                  className="group flex items-baseline gap-4 py-4 transition-colors"
+                >
+                  <span className="font-medium group-hover:text-primary">{page.title}</span>
+                  <span className="flex-1 text-sm text-muted-foreground">
+                    {BLURBS[page.slug]}
+                  </span>
+                  <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              </li>
+            ))}
         </ul>
 
-        <p className="mt-10 flex items-center gap-2 text-sm text-muted-foreground">
-          <Rocket className="size-4" />
-          New here? Start with{' '}
-          <Link to="/docs/getting-started/what-is-convio" className="text-primary underline-offset-4 hover:underline">
-            What is Convio?
-          </Link>
+        <p className="mt-8 text-sm text-muted-foreground">
+          Convio is MIT licensed and{' '}
+          <a
+            href="https://github.com/bilals2008/convio-ai"
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            open source on GitHub
+          </a>
+          . Found something wrong? Open an issue.
         </p>
       </div>
     </DocsShell>
