@@ -42,6 +42,20 @@ export const docSections: DocSection[] = [
       { title: 'Login activity & sessions', slug: 'organizations/login-activity-and-sessions' },
     ],
   },
+  {
+    title: 'AI Agents',
+    pages: [
+      { title: 'What is an AI agent?', slug: 'agents/what-is-an-agent' },
+      { title: 'Creating an agent', slug: 'agents/creating-an-agent' },
+      { title: 'Choosing a model', slug: 'agents/choosing-a-model' },
+      { title: 'Writing system prompts', slug: 'agents/writing-system-prompts' },
+      { title: 'Configuring agent settings', slug: 'agents/configuring-agent-settings' },
+      { title: 'Tools & capabilities', slug: 'agents/tools-and-capabilities' },
+      { title: 'Welcome messages', slug: 'agents/welcome-messages-and-suggested-replies' },
+      { title: 'Testing in the playground', slug: 'agents/testing-in-the-playground' },
+      { title: 'Agent statuses', slug: 'agents/agent-statuses' },
+    ],
+  },
 ]
 
 /** Flat, ordered list — drives prev/next. */
