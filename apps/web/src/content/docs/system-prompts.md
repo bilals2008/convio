@@ -4,7 +4,7 @@ The system prompt is the highest-leverage field you own. The model is rented; th
 
 ## What it actually is
 
-A system prompt is standing instructions that apply to every turn of every conversation that agent handles. Not a greeting, not a persona name, not a one-off — it is the frame the model reads before anything else.
+A system prompt is standing instructions that apply to every turn of every conversation that agent handles. Not a greeting, not a persona name, not a one-off. It is the frame the model reads before anything else.
 
 Everything the agent knows about your business that is not in a knowledge base has to be here.
 
@@ -12,13 +12,13 @@ Everything the agent knows about your business that is not in a knowledge base h
 
 Four parts, in this order.
 
-**1. Role** — who the agent is, in one line.
+**1. Role**: who the agent is, in one line.
 
-**2. Scope** — what it handles, and explicitly what it does not.
+**2. Scope**: what it handles, and explicitly what it does not.
 
-**3. Rules** — the constraints that must always hold.
+**3. Rules**: the constraints that must always hold.
 
-**4. Style** — tone, length, formatting.
+**4. Style**: tone, length, formatting.
 
 ```text
 You are a support agent for Acme, a billing platform.
@@ -46,7 +46,7 @@ Style: plain sentences, no more than 4 sentences unless asked for detail.
 >
 > "If you do not know, say so and hand off. Never guess at a policy." It is the difference between an agent that admits the gap and one that invents a refund window that does not exist.
 
-**Make it checkable.** "Never quote a refund amount without confirming the invoice ID" is verifiable. "Be helpful" is not — drop it.
+**Make it checkable.** "Never quote a refund amount without confirming the invoice ID" is verifiable. "Be helpful" is not. Drop it.
 
 **Keep it short.** Long prompts cost tokens on every request and dilute the instructions that matter. If a rule matters, put it near the top.
 
@@ -85,6 +85,6 @@ Note what is absent: "You are a helpful and friendly assistant." It adds nothing
 
 ## Iterating
 
-Write one prompt, then test it against real questions in the [playground](/docs/agents#testing-in-the-playground). The failures tell you which rule to add — almost always a scope line or a "don't guess" line, almost never a tone change.
+Write one prompt, then test it against real questions in the [playground](/docs/agents#testing-in-the-playground). The failures tell you which rule to add, almost always a scope line or a "don't guess" line, almost never a tone change.
 
 The test that finds the most problems: ask about a policy you never wrote down. If the agent answers with confidence, you have found your next rule.

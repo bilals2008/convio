@@ -62,7 +62,7 @@ export function DocsToc({
                 heading.level === 2 ? 'pl-3.5' : 'pl-6 text-xs',
                 activeId === heading.id
                   ? 'border-primary font-medium text-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground'
+                  : 'border-muted-foreground/30 text-muted-foreground hover:text-foreground'
               )}
             >
               {heading.text}

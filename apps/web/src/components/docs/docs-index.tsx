@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { DocsShell } from '@/components/docs/docs-shell'
-import { docPages } from '@/lib/docs/nav'
+import { buttonVariants } from '@/components/ui/button'
+import { docSections, type DocPage } from '@/lib/docs/nav'
+import { cn } from '@/lib/utils'
 
 const BLURBS: Record<string, string> = {
+  '': 'What Convio is and how the pieces fit together.',
   'getting-started': 'Account, organization, team, dashboard, and the full vocabulary.',
   agents: 'Concepts, creating, model choice, tools, testing, and statuses.',
   'system-prompts': 'The highest-leverage field you own, with worked examples.',
@@ -13,58 +16,98 @@ const BLURBS: Record<string, string> = {
 }
 
 const STEPS = [
-  { n: '01', title: 'Create an account and an organization', body: 'An organization is the workspace boundary — agents, knowledge, keys, and billing all live inside one.' },
+  { n: '01', title: 'Create an account and an organization', body: 'An organization is the workspace boundary. Agents, knowledge, keys, and billing all live inside one.' },
   { n: '02', title: 'Create your first agent', body: 'Name it, pick a model, write a system prompt. Start from a template or blank.' },
-  { n: '03', title: 'Test it in the playground', body: 'It runs your real prompt, model, and knowledge — without touching production.' },
+  { n: '03', title: 'Test it in the playground', body: 'It runs your real prompt, model, and knowledge, without touching production.' },
   { n: '04', title: 'Set it active and deploy', body: 'Draft agents accept nothing. Once it answers in production, you are live.' },
 ]
+
+function PageCard({ page }: { page: DocPage }) {
+  const Icon = page.icon
+  return (
+    <Link
+      to={`/docs/${page.slug}`}
+      className="group flex items-start gap-3.5 rounded-lg border border-border bg-card p-4 transition-colors duration-150 hover:border-foreground/20 hover:bg-accent/40"
+    >
+      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors group-hover:text-primary">
+        <Icon aria-hidden="true" className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          {page.title}
+          <ArrowRight
+            aria-hidden="true"
+            className="size-3.5 -translate-x-0.5 text-primary opacity-0 transition-all duration-150 group-hover:translate-x-0 group-hover:opacity-100"
+          />
+        </span>
+        <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">
+          {BLURBS[page.slug]}
+        </span>
+      </span>
+    </Link>
+  )
+}
 
 export function DocsIndex() {
   return (
     <DocsShell>
-      <div className="max-w-[46rem]">
-        <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-          Convio Documentation
+      <div className="pb-4">
+        {/* Hero — kicker, one big promise, one action. The way Resend/Vercel open their docs. */}
+        <p className="font-mono text-xs tracking-[0.08em] text-primary uppercase">Docs</p>
+        <h1 className="mt-3 max-w-[34rem] font-heading text-4xl font-bold tracking-tight text-balance sm:text-[2.75rem] sm:leading-[1.1]">
+          Ship AI agents that answer everywhere
         </h1>
-        <p className="mt-4 text-lg text-muted-foreground">
+        <p className="mt-4 max-w-[38rem] text-[15px] leading-6.5 text-muted-foreground">
           Convio is a platform for building, deploying, and scaling AI agents across every
           channel. One agent definition, many places to reach people.
         </p>
-
-        <div className="mt-8 rounded-lg border border-border bg-muted/40 p-5">
-          <p className="text-sm font-medium">New here? Four steps to a live agent.</p>
-          <ol className="mt-4 space-y-4">
-            {STEPS.map((step) => (
-              <li key={step.n} className="flex gap-4">
-                <span className="font-mono text-xs text-muted-foreground">{step.n}</span>
-                <span>
-                  <span className="text-sm font-medium">{step.title}</span>
-                  <span className="mt-0.5 block text-sm text-muted-foreground">{step.body}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
+        <div className="mt-7 flex flex-wrap items-center gap-3">
+          <Link to="/docs/getting-started" className={cn(buttonVariants({ size: 'lg' }))}>
+            Get started
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+          <Link
+            to="/docs/agents"
+            className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}
+          >
+            Browse AI agents
+          </Link>
         </div>
 
-        <h2 className="mt-14 font-heading text-lg font-semibold tracking-tight">Documentation</h2>
-        <ul className="mt-4 divide-y divide-border border-y border-border">
-          {docPages
-            .filter((page) => page.slug !== '')
-            .map((page) => (
-              <li key={page.slug}>
-                <Link
-                  to={`/docs/${page.slug}`}
-                  className="group flex items-baseline gap-4 py-4 transition-colors"
-                >
-                  <span className="font-medium group-hover:text-primary">{page.title}</span>
-                  <span className="flex-1 text-sm text-muted-foreground">
-                    {BLURBS[page.slug]}
-                  </span>
-                  <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              </li>
-            ))}
-        </ul>
+        {/* Quick start as four flat tiles instead of one boxed list. */}
+        <h2 className="mt-16 font-heading text-lg font-semibold tracking-tight">
+          New here? Four steps to a live agent
+        </h2>
+        <ol className="mt-4 grid gap-3 sm:grid-cols-2">
+          {STEPS.map((step) => (
+            <li
+              key={step.n}
+              className="rounded-lg border border-border p-4 transition-colors hover:bg-accent/30"
+            >
+              <span className="font-mono text-xs text-muted-foreground">{step.n}</span>
+              <p className="mt-1.5 text-sm font-medium">{step.title}</p>
+              <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+
+        {/* Every page reachable from here, grouped exactly like the sidebar. */}
+        <h2 className="mt-16 font-heading text-lg font-semibold tracking-tight">
+          Documentation
+        </h2>
+        {docSections.map((section) => (
+          <section key={section.title} className="mt-8">
+            <h3 className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+              {section.title}
+            </h3>
+            {/* The shell caps this column at 52rem, so two comfortable cards beat three cramped ones. */}
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {section.pages.map((page) => (
+                <PageCard key={page.slug} page={page} />
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
     </DocsShell>
   )

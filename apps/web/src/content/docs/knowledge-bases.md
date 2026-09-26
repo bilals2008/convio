@@ -10,25 +10,25 @@ A system prompt can only hold so much, and it costs tokens on every single reque
 
 Documents are uploaded, split into chunks, and embedded as vectors. When a question arrives, Convio finds the chunks closest in meaning and puts them in front of the model as context.
 
-The agent therefore answers from **retrieved text**, not from memory. If nothing relevant is in the knowledge base, the good outcome is that it says it does not know — which is why your [system prompt](/docs/system-prompts) needs an explicit "if you do not know, say so" rule.
+The agent therefore answers from **retrieved text**, not from memory. If nothing relevant is in the knowledge base, the good outcome is that it says it does not know, which is why your [system prompt](/docs/system-prompts) needs an explicit "if you do not know, say so" rule.
 
 ## Creating one
 
 **Knowledge → New**, then name it. A knowledge base holds:
 
-- **Documents** — uploaded files or connected URLs
-- **Q&A pairs** — question and answer pairs you write yourself
+- **Documents**: uploaded files or connected URLs
+- **Q&A pairs**: question and answer pairs you write yourself
 
 Attach it to an agent on the agent's **Knowledge** section. One knowledge base can be shared by several agents; an agent has at most one.
 
 ## Documents
 
-Each document has a status, and it starts as **pending** while it is being processed. Wait for it to leave that state before testing retrieval — a half-indexed document will return partial answers, and people usually blame the prompt.
+Each document has a status, and it starts as **pending** while it is being processed. Wait for it to leave that state before testing retrieval. A half-indexed document will return partial answers, and people usually blame the prompt.
 
 > [!TIP]
 > **Wait for `ready` before you test**
 >
-> A document still processing returns partial chunks, which looks exactly like a bad prompt. Check the status first — it saves an hour of rewriting something that was never broken.
+> A document still processing returns partial chunks, which looks exactly like a bad prompt. Check the status first. It saves an hour of rewriting something that was never broken.
 
 Documents can be files or URLs. Anything that changes often is better as a URL than an upload.
 
@@ -51,7 +51,7 @@ Two rules:
 
 ## Checking retrieval
 
-The playground is the place to verify this. There is a one-click prompt that tests the knowledge base directly — use it before writing your own question.
+The playground is the place to verify this. There is a one-click prompt that tests the knowledge base directly. Use it before writing your own question.
 
 The failure looks like this: the agent answers confidently and wrongly, from its own knowledge, while the document that would have corrected it sits in the base. That means retrieval found nothing relevant, not that the model ignored it. Check the document is fully processed, then check the question is answerable from the text as written.
 

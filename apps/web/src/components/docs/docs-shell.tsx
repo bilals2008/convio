@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { ArrowUpRight, LifeBuoy, ListTree } from 'lucide-react'
 import { DocsSidebar } from '@/components/docs/docs-sidebar'
 import { DocsToc } from '@/components/docs/docs-toc'
@@ -55,6 +55,14 @@ export function DocsShell({
   const [searchOpen, setSearchOpen] = useState(false)
   const hasToc = toc.length > 0
 
+  // The app has no scroll restoration, so navigating from mid-page left the reader at
+  // the old scroll offset — the new page opened at its bottom and looked broken.
+  // Keyed on pathname only, so in-page hash jumps are untouched.
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
   // Owned here rather than in DocsSearch: the shortcut has to fire from anywhere on the
   // page, and the topbar trigger is the only thing that should read or write it.
   useEffect(() => {
@@ -93,8 +101,12 @@ export function DocsShell({
         <div className="min-w-0 flex-1">
           <div
             className={cn(
-              'mx-auto grid w-full max-w-[52rem] gap-x-12 px-4 sm:px-6',
-              hasToc && 'xl:max-w-[66rem] xl:grid-cols-[minmax(0,46rem)_14rem]',
+              'grid w-full max-w-[52rem] gap-x-12 px-4 sm:px-6',
+              // TOC pages stay centred (content + rail read as one block); the index
+              // hugs the sidebar so the landing column starts at the left edge.
+              hasToc
+                ? 'mx-auto xl:max-w-[66rem] xl:grid-cols-[minmax(0,46rem)_14rem]'
+                : 'mr-auto',
             )}
           >
             <main className="min-w-0 py-8 sm:py-10">
