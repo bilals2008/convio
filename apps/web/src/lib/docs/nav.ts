@@ -2,10 +2,14 @@ import {
   BookOpen,
   Bot,
   CreditCard,
+  Headphones,
   Library,
+  MessagesSquare,
   PenLine,
   RadioTower,
   Rocket,
+  Target,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -52,6 +56,15 @@ export const docSections: DocSection[] = [
     pages: [
       { title: 'Channels & deployment', slug: 'channels', icon: RadioTower },
       { title: 'Billing & usage', slug: 'billing', icon: CreditCard },
+    ],
+  },
+  {
+    title: 'Examples',
+    pages: [
+      { title: 'Support FAQ agent', slug: 'examples/support-faq', icon: MessagesSquare },
+      { title: 'Lead capture agent', slug: 'examples/lead-capture', icon: Target },
+      { title: 'WhatsApp order status', slug: 'examples/whatsapp-orders', icon: Headphones },
+      { title: 'Internal helpdesk', slug: 'examples/internal-helpdesk', icon: Wrench },
     ],
   },
 ]

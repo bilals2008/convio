@@ -13,6 +13,10 @@ const BLURBS: Record<string, string> = {
   'knowledge-bases': 'Ground answers in your documents instead of the model’s memory.',
   channels: 'Deploy to the web widget, WhatsApp, Slack, Telegram, Discord, and SMS.',
   billing: 'How token usage is metered, plans, trials, and keeping costs predictable.',
+  'examples/support-faq': 'Answer product questions from your help docs in five minutes.',
+  'examples/lead-capture': 'Qualify visitors one question at a time and hand off warm leads.',
+  'examples/whatsapp-orders': 'Instant, correct order status on your WhatsApp business number.',
+  'examples/internal-helpdesk': 'Your team’s questions answered from the docs you already have.',
 }
 
 const STEPS = [
