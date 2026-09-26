@@ -2,11 +2,10 @@
 
 # Convio
 
-**The open-source platform for building, deploying and scaling AI agents across every channel.**
+**The platform for building, deploying and scaling AI agents across every channel.**
 
 Multi-tenant · Multi-channel · Provider-agnostic · Real-time
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](./tsconfig.base.json)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![Fastify](https://img.shields.io/badge/Fastify-Backend-000000?logo=fastify&logoColor=white)](https://fastify.dev)
@@ -137,10 +136,6 @@ convio/
 ## Contributing
 
 Contributions are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
-
-## License
-
-Released under the [MIT License](./LICENSE).
 
 ---
 

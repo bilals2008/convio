@@ -27,8 +27,8 @@ export function DocsIndex() {
           Convio Documentation
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Convio is an open-source platform for building, deploying, and scaling AI agents across
-          every channel. One agent definition, many places to reach people.
+          Convio is a platform for building, deploying, and scaling AI agents across every
+          channel. One agent definition, many places to reach people.
         </p>
 
         <div className="mt-8 rounded-lg border border-border bg-muted/40 p-5">

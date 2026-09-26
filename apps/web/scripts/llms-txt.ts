@@ -51,7 +51,7 @@ export function buildLlmsFiles(outDir: string): void {
   const index = [
     "# Convio",
     "",
-    "> Open-source platform for building, deploying, and scaling AI agents across every channel.",
+    "> Platform for building, deploying, and scaling AI agents across every channel.",
     "",
     "One agent definition — a model, a system prompt, a knowledge base and tools — deployed to",
     "the web widget, WhatsApp, Slack, Telegram, Discord and SMS. Pages are self-contained and",
