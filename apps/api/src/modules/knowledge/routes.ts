@@ -11,6 +11,7 @@ import { writeFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { resolveGenerationProvider } from '../agents/agent-generator.js'
+import { checkKnowledgeBaseLimit } from '../../services/billing.js'
 import { KB_GENERATION_PROMPT, parseKbDraft } from './kb-generator.js'
 import { getOrCreateQaDocument, syncQaChunk, deleteQaChunk, getQaOrThrow } from './qa-service.js'
 
@@ -128,6 +129,7 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
     preHandler: [
       fastify.authenticate,
       fastify.requireMembership,
+      fastify.checkKnowledgeBaseLimit,
       validate({ params: orgParamsSchema, body: createKbBodySchema }),
     ],
   }, async (request) => {
@@ -146,6 +148,7 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
     preHandler: [
       fastify.authenticate,
       fastify.requireMembership,
+      fastify.checkKnowledgeBaseLimit,
       validate({ params: orgParamsSchema, body: generateKbBodySchema }),
     ],
   }, async (request) => {
@@ -356,6 +359,17 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
     if (!kb) throw new AppError(404, 'Knowledge base not found')
 
     await fastify.ensureAdmin(request.userId!, kb.organizationId)
+
+    // A clone is a new knowledge base, so it counts against the same limit. The org comes
+    // from the loaded KB rather than a param, so the check is inline here.
+    const kbLimit = await checkKnowledgeBaseLimit(kb.organizationId)
+    if (!kbLimit.allowed) {
+      throw new AppError(
+        402,
+        `Knowledge base limit (${kbLimit.limit}) reached. You have ${kbLimit.current}. Upgrade your plan to create more.`,
+        'PLAN_LIMIT_EXCEEDED',
+      )
+    }
 
     const copy = await prisma.knowledgeBase.create({
       data: {

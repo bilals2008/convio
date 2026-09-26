@@ -12,7 +12,7 @@ import { getTemplate, listTemplates } from './templates.js'
 import { AGENT_GENERATION_PROMPT, resolveGenerationProvider, parseAgentDraft } from './agent-generator.js'
 import { getToolHandler, loadAgentToolHandlers, loadDbToolHandlers, loadAgentComposioHandlers, ASK_USER_TOOL } from '../../services/tools/index.js'
 import { loadComposioToolHandlers } from '../../services/composio/session-loader.js'
-import { getOrgPlan } from '../../services/billing.js'
+import { getOrgPlan, checkAgentLimit } from '../../services/billing.js'
 import { guardrailInputRefusal, guardrailPrompt } from '../../services/guardrails.js'
 import { NOTIFICATION_EVENTS } from '../../services/notifications/events.js'
 import { z } from 'zod'
@@ -200,6 +200,16 @@ export default async function agentsRoutes(fastify: FastifyInstance) {
     const { organizationId, template: templateType } = body
 
     await fastify.getMembership(request.userId!, organizationId)
+
+    // Templates create a real agent, so they count against the same limit.
+    const agentLimit = await checkAgentLimit(organizationId)
+    if (!agentLimit.allowed) {
+      throw new AppError(
+        402,
+        `Agent limit (${agentLimit.limit}) reached. You have ${agentLimit.current} agents. Upgrade your plan to create more.`,
+        'PLAN_LIMIT_EXCEEDED',
+      )
+    }
 
     const template = getTemplate(templateType)
     if (!template) {

@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { prisma } from '@convio/database'
 import { chatWithAgent } from '../modules/ai/routes.js'
 import { formatResponse } from './formatters/index.js'
+import { overMessageLimit, MESSAGE_LIMIT_NOTICE } from './billing.js'
 
 const TWILIO_API = 'https://api.twilio.com/2010-04-01'
 
@@ -222,6 +223,19 @@ export async function processIncomingMessage(
         }
       }
       metadata.media = media
+    }
+
+    if (await overMessageLimit(deployment.agent.organizationId)) {
+      const limitAccountSid = config.accountSid as string
+      const limitAuthToken = config.authToken as string
+      const limitPhoneNumber = config.phoneNumber as string
+      const limitSend = await sendWhatsAppMessage(
+        limitAccountSid, limitAuthToken, limitPhoneNumber, fromNumber, MESSAGE_LIMIT_NOTICE,
+      )
+      if (!limitSend.success) {
+        return { error: limitSend.error || 'Failed to send reply' }
+      }
+      return { response: MESSAGE_LIMIT_NOTICE }
     }
 
     await prisma.message.create({

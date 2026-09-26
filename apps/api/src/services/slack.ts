@@ -1,6 +1,7 @@
 import { prisma } from '@convio/database'
 import crypto from 'node:crypto'
 import { chatWithAgent } from '../modules/ai/routes.js'
+import { overMessageLimit, MESSAGE_LIMIT_NOTICE } from './billing.js'
 
 const SLACK_API = 'https://slack.com/api'
 
@@ -160,6 +161,14 @@ export async function processSlackEvent(
           metadata: { slackChannelId: channelId, teamId: body.team_id },
         },
       })
+    }
+
+    if (await overMessageLimit(deployment.agent.organizationId)) {
+      const sendResult = await sendSlackMessage(botToken, channelId, MESSAGE_LIMIT_NOTICE)
+      if (!sendResult.success) {
+        return { error: sendResult.error || 'Failed to send reply' }
+      }
+      return { response: MESSAGE_LIMIT_NOTICE }
     }
 
     await prisma.message.create({

@@ -8,6 +8,7 @@ import { retrieveContext } from '../../services/processor.js'
 import { loadAgentToolHandlers } from '../../services/tools/index.js'
 import type { AIProvider, Message } from '@convio/ai'
 import { createRequestSignal } from '../../services/concurrency.js'
+import { checkMessageLimit } from '../../services/billing.js'
 
 const isDev = process.env.NODE_ENV !== 'production'
 
@@ -153,6 +154,16 @@ export default async function aiRoutes(fastify: FastifyInstance) {
     }
 
     await fastify.getMembership(request.userId!, agent.organizationId)
+
+    // This route streams a model call but persists no Message rows, so without this check
+    // it would be the one path that spends tokens without counting against the plan.
+    const limitCheck = await checkMessageLimit(agent.organizationId)
+    if (!limitCheck.allowed) {
+      return reply.code(402).send({
+        error: `Monthly message limit (${limitCheck.limit.toLocaleString()}) reached. Upgrade your plan to continue.`,
+        code: 'PLAN_LIMIT_EXCEEDED',
+      })
+    }
 
     let provider
     try {

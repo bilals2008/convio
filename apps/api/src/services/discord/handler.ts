@@ -3,6 +3,7 @@ import { chatWithAgent } from '../../modules/ai/routes.js'
 import { formatResponse } from '../formatters/index.js'
 import { patchWebhookMessage, sendFollowupMessage, BOT_COLOR, sendChannelMessage, createThread, buildActionRow, buildButton } from './client.js'
 import { checkRolePermission } from './permissions.js'
+import { overMessageLimit, MESSAGE_LIMIT_NOTICE } from '../billing.js'
 import type { DiscordInteraction, InteractionResponse } from './types.js'
 
 const INTERACTION_TYPE_PING = 1
@@ -285,6 +286,16 @@ async function handleAiReply(
         where: { id: conversation.id },
         data: { contactName },
       })
+    }
+
+    if (await overMessageLimit(deployment.agent.organizationId)) {
+      const notice = { embeds: [{ description: MESSAGE_LIMIT_NOTICE, color: BOT_COLOR }] }
+      try {
+        await patchWebhookMessage(interaction.application_id, interaction.token!, notice)
+      } catch {
+        await sendFollowupMessage(interaction.application_id, interaction.token!, notice).catch(() => {})
+      }
+      return
     }
 
     await prisma.message.create({

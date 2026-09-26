@@ -845,14 +845,17 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
           ? ((agent.widgetConfig as Record<string, unknown>).composioToolkits as string[])
           : []
         if (agentComposioToolkits.length > 0) {
-          // Plan gate: Composio toolkits are a Pro feature.
           let planName: string | null = null
           try {
             planName = (await getOrgPlan(agent.organizationId)).name
           } catch {
             planName = null
           }
-          if (planName === 'pro' || planName === 'business' || planName === 'enterprise') {
+          // Plan gate: Composio toolkits are a paid feature. Deny-list rather than
+          // allow-list, to match the other three gates — an allow-list silently denied
+          // every plan key an admin created in the pricing UI. getOrgPlan reports 'free'
+          // for a key with no plan row, so a dangling key is denied everywhere.
+          if (planName !== null && planName !== 'free') {
             const result = await loadComposioToolHandlers({
               orgId: agent.organizationId,
               requestedToolkits: agentComposioToolkits,
@@ -1105,6 +1108,13 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
       throw new AppError(403, 'This agent has no active widget', 'FORBIDDEN')
     }
     assertConversationAccess(request, widgetDomains, conversation)
+
+    // This route persists the answers turn plus the assistant reply, so it has to be
+    // metered like every other widget path.
+    const resumeLimitCheck = await checkMessageLimit(conversation.agent.organizationId)
+    if (!resumeLimitCheck.allowed) {
+      return { data: { response: 'This conversation has reached its monthly message limit.' } }
+    }
 
     const agent = conversation.agent
     const answersText = answers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n')

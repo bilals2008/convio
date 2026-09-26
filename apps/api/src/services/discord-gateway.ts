@@ -4,6 +4,7 @@ import { chatWithAgent } from '../modules/ai/routes.js'
 import { formatResponse } from './formatters/index.js'
 import { handleMessageUpdate, handleMessageReaction, handleGuildCreate } from './discord/gateway.js'
 import { sendChannelMessage, createThread, BOT_COLOR } from './discord/client.js'
+import { overMessageLimit, MESSAGE_LIMIT_NOTICE } from './billing.js'
 
 const GATEWAY_URL = 'wss://gateway.discord.gg/?v=10&encoding=json'
 
@@ -112,6 +113,13 @@ async function handleMessageCreate(data: any, botToken: string, botUserId: strin
       where: { id: conversation.id },
       data: { contactName },
     })
+  }
+
+  if (await overMessageLimit(deployment.agent.organizationId)) {
+    await sendChannelMessage(botToken, data.channel_id, {
+      embeds: [{ description: MESSAGE_LIMIT_NOTICE, color: BOT_COLOR }],
+    }).catch(() => {})
+    return
   }
 
   await prisma.message.create({
