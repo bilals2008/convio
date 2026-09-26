@@ -6,7 +6,6 @@ import { resolveProviderKey } from '../../services/provider-key.js'
 import { decryptSecret, getEncryptionKey } from '../../services/encryption.js'
 import { retrieveContext } from '../../services/processor.js'
 import { loadAgentToolHandlers } from '../../services/tools/index.js'
-import { z } from 'zod'
 import type { AIProvider, Message } from '@convio/ai'
 import { createRequestSignal } from '../../services/concurrency.js'
 
@@ -263,77 +262,5 @@ export default async function aiRoutes(fastify: FastifyInstance) {
 
     const deduped = [...new Map(models.flat().map((m) => [m.id, m])).values()]
     return { data: deduped }
-  })
-
-  const imageGenerateSchema = z.object({
-    model: z.string().min(1),
-    prompt: z.string().min(1).max(10000),
-    size: z.string().default('1024x1024'),
-    images: z.array(z.string().url()).max(5).optional(),
-    responseFormat: z.enum(['url', 'b64_json']).optional(),
-    providerKeyId: z.string().uuid().optional(),
-  })
-
-  fastify.post('/images/generate', {
-    preHandler: [fastify.authenticate],
-  }, async (request, reply) => {
-    const { model, prompt, size, images, responseFormat, providerKeyId } = request.body as z.infer<typeof imageGenerateSchema>
-
-    const providerKey = providerKeyId
-      ? await prisma.providerKey.findFirst({
-          where: {
-            id: providerKeyId,
-            organization: { memberships: { some: { userId: request.userId! } } },
-          },
-          select: { apiKey: true, provider: true },
-        })
-      : null
-
-    let apiKey = providerKey ? decryptSecret(providerKey.apiKey, getEncryptionKey()) : undefined
-
-    if (!apiKey) {
-      const org = await prisma.membership.findFirst({
-        where: { userId: request.userId! },
-        orderBy: { createdAt: 'asc' },
-        select: { organizationId: true },
-      })
-      if (org) {
-        const resolved = await resolveProviderKey({
-          organizationId: org.organizationId,
-          model,
-          providerKeyId: null,
-        })
-        if (resolved.apiKey) apiKey = resolved.apiKey
-      }
-    }
-
-    let provider
-    try {
-      provider = getProviderForModel(model, providerKey?.provider)
-    } catch (err) {
-      return reply.code(400).send({ error: err instanceof Error ? err.message : 'Unknown provider' })
-    }
-
-    if (!provider.generateImage) {
-      return reply.code(400).send({ error: `${provider.name} does not support image generation` })
-    }
-
-    const signal = createRequestSignal((cb) => request.raw.once('close', cb))
-
-    try {
-      const result = await provider.generateImage({
-        model,
-        prompt,
-        size,
-        images,
-        responseFormat,
-        apiKey,
-        signal,
-      })
-      return { data: result }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Image generation failed'
-      return reply.code(502).send({ error: isDev ? msg : 'Image generation failed. Check your API key and try again.' })
-    }
   })
 }
