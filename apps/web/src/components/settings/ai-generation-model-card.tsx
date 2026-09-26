@@ -1,3 +1,4 @@
+import { toastMutationError } from '@/lib/api/mutation-error'
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Wand2 } from 'lucide-react'
@@ -36,7 +37,7 @@ export function AiGenerationModelCard() {
       queryClient.invalidateQueries({ queryKey: ['organizations'] })
       toast.success('AI generation model updated')
     },
-    onError: () => toast.error('Failed to update AI generation model'),
+    onError: (error) => toastMutationError(error, 'Failed to update AI generation model'),
   })
 
   return (

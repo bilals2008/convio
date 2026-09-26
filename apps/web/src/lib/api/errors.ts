@@ -33,3 +33,34 @@ export function getFriendlyErrorMessage(error: unknown): string {
 
   return DEFAULT_ERROR
 }
+
+interface ApiError {
+  response?: { status?: number; data?: { message?: string; code?: string; error?: { message?: string } } }
+  friendlyMessage?: string
+  message?: string
+}
+
+// The server sends { success: false, message } for every AppError, including the plan-limit
+// 402s that tell the user their actual limit. Read it straight off the response so this
+// works no matter which axios instance made the call.
+function serverMessage(error: unknown): string | undefined {
+  const data = (error as ApiError)?.response?.data
+  const message = data?.message ?? data?.error?.message
+  return typeof message === 'string' && message.trim() !== '' ? message : undefined
+}
+
+/**
+ * The message to show a user for a failed request. Prefers what the server actually said,
+ * so a 402 like "Knowledge base limit (1) reached" reaches the user instead of a generic
+ * "Something went wrong". `fallback` is only used when there is nothing usable to show.
+ */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  return serverMessage(error) ?? (error as ApiError)?.friendlyMessage ?? fallback
+}
+
+/** True when the request was refused because the org is on the plan's limit. */
+export function isPlanLimitError(error: unknown): boolean {
+  const response = (error as ApiError)?.response
+  if (response?.status !== 402) return false
+  return response.data?.code === 'PLAN_LIMIT_EXCEEDED' || Boolean(serverMessage(error))
+}

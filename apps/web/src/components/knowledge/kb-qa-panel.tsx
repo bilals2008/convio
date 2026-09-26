@@ -1,3 +1,4 @@
+import { toastMutationError } from '@/lib/api/mutation-error'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Plus, Pencil, Trash2, GripVertical, X, BookOpen } from 'lucide-react'
@@ -32,7 +33,7 @@ export function KbQaPanel({ knowledgeBaseId }: { knowledgeBaseId: string }) {
       queryClient.invalidateQueries({ queryKey: ['knowledge-base-qa', knowledgeBaseId] })
       toast.success('Q&A pair added')
     },
-    onError: () => toast.error('Failed to add pair'),
+    onError: (error) => toastMutationError(error, 'Failed to add pair'),
   })
 
   const updateMutation = useMutation({
@@ -42,7 +43,7 @@ export function KbQaPanel({ knowledgeBaseId }: { knowledgeBaseId: string }) {
       queryClient.invalidateQueries({ queryKey: ['knowledge-base-qa', knowledgeBaseId] })
       toast.success('Saved')
     },
-    onError: () => toast.error('Failed to save'),
+    onError: (error) => toastMutationError(error, 'Failed to save'),
   })
 
   const deleteMutation = useMutation({
@@ -51,7 +52,7 @@ export function KbQaPanel({ knowledgeBaseId }: { knowledgeBaseId: string }) {
       queryClient.invalidateQueries({ queryKey: ['knowledge-base-qa', knowledgeBaseId] })
       toast.success('Deleted')
     },
-    onError: () => toast.error('Failed to delete'),
+    onError: (error) => toastMutationError(error, 'Failed to delete'),
   })
 
   const handleAddSubmit = (e: React.FormEvent) => {

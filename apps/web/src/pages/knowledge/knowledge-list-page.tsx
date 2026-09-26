@@ -81,6 +81,7 @@ import { KbGenerateModal as KnowledgeGenerateModal } from '@/components/knowledg
 import type { SourceType } from '@/components/knowledge/source-picker-modal'
 import { FileIcon } from '@/components/shared/file-icon'
 import { toast } from '@/lib/toast'
+import { toastMutationError } from '@/lib/api/mutation-error'
 
 interface KnowledgeBase {
   id: string
@@ -167,7 +168,7 @@ export default function KnowledgeListPage() {
       toast.success('Knowledge base created')
       if (createdId) navigate(`/knowledge/${createdId}`, { state: { sourceType: pendingSource } })
     },
-    onError: () => toast.error('Failed to create knowledge base'),
+    onError: (error) => toastMutationError(error, 'Failed to create knowledge base'),
   })
 
   const filtered = useMemo(() =>

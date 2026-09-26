@@ -1,3 +1,4 @@
+import { toastMutationError } from '@/lib/api/mutation-error'
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Loader2, Search } from 'lucide-react'
@@ -29,7 +30,7 @@ export function KbTestPanel({ knowledgeBaseId, onTested, onSearch }: KbTestPanel
       onSearch({ latency, found: hits.length, query })
       onTested()
     },
-    onError: () => toast.error('Search failed'),
+    onError: (error) => toastMutationError(error, 'Search failed'),
   })
 
   return (
