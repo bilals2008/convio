@@ -14,6 +14,10 @@ export interface DocPage {
   /** Path under /docs, no extension. Empty string is the docs index. */
   slug: string
   icon: LucideIcon
+  /** Optional rail marker, e.g. to flag a freshly published page. */
+  badge?: 'new' | 'popular'
+  /** Deeper pages, rendered nested under this one. Optional — most pages are leaves. */
+  children?: DocPage[]
 }
 
 export interface DocSection {
@@ -22,10 +26,10 @@ export interface DocSection {
 }
 
 /**
- * Three labelled groups in reading order. Small enough that the sidebar never needs
- * collapsing, grouped enough that a reader can find a page by intent rather than by
- * scanning a flat list. The nav is the source of truth: the sidebar, the docs index
- * and prev/next pagination are all derived from it.
+ * Labelled groups in reading order, grouped by intent rather than left as a flat list.
+ * The nav is the source of truth: the sidebar, the docs index and prev/next pagination
+ * are all derived from it. Sections are collapsible in the sidebar, so a long corpus
+ * stays scannable without hiding anything by default.
  */
 export const docSections: DocSection[] = [
   {
@@ -53,4 +57,7 @@ export const docSections: DocSection[] = [
 ]
 
 /** Flat, in reading order — the shape pagination and the docs index need. */
-export const docPages: DocPage[] = docSections.flatMap((section) => section.pages)
+const flatten = (pages: DocPage[]): DocPage[] =>
+  pages.flatMap((page) => [page, ...(page.children ? flatten(page.children) : [])])
+
+export const docPages: DocPage[] = docSections.flatMap((section) => flatten(section.pages))

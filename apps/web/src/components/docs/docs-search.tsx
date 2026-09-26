@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { FileText, Search } from 'lucide-react'
@@ -10,9 +9,40 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+// Type-only: the index itself stays in its lazy chunk, the types are erased anyway.
+import type { SearchItem } from '@/lib/docs/search-index'
+import { cn } from '@/lib/utils'
 
-export function DocsSearch() {
-  const [open, setOpen] = useState(false)
+/** The shortcut hint has to name the key the reader's keyboard actually has. */
+const IS_APPLE = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent)
+
+const KBD =
+  'flex h-5 min-w-5 items-center justify-center rounded border border-border bg-background px-1.5 font-mono text-[10px] leading-none whitespace-nowrap'
+
+/**
+ * Shared by the topbar trigger and the sidebar trigger — one source for the platform
+ * check and the key styling, so the two never disagree about what ⌘K looks like. One
+ * chip, not two: two chips are wider than the docs rail and force a horizontal scroll.
+ */
+export function DocsShortcut({ className }: { className?: string }) {
+  return (
+    <kbd className={cn(KBD, 'ml-auto shrink-0', className)} aria-hidden="true">
+      {IS_APPLE ? '⌘K' : 'Ctrl K'}
+    </kbd>
+  )
+}
+
+/**
+ * Open state is owned by the shell, not here: the sidebar renders a second trigger and
+ * ⌘K has to work from either rail, and two owners of one dialog can only fight.
+ */
+export function DocsSearch({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   const navigate = useNavigate()
 
   // The corpus is a lazily imported module, not server state — but it is still an
@@ -24,47 +54,34 @@ export function DocsSearch() {
     staleTime: Infinity,
   })
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault()
-        setOpen((value) => !value)
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [])
-
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:w-56 sm:justify-start sm:gap-2 sm:border sm:border-border sm:bg-card/60 sm:px-3"
-        aria-label="Search docs"
+        onClick={() => onOpenChange(true)}
+        className="flex h-9 w-9 items-center justify-center gap-2 rounded-lg bg-muted text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none md:w-full md:max-w-[26rem] md:justify-start md:px-3 md:text-sm"
+        aria-label="Search documentation"
       >
-        <Search className="size-4 shrink-0" />
-        <span className="hidden text-sm sm:inline">Search docs</span>
-        <kbd className="ml-auto hidden rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline">
-          ⌘K
-        </kbd>
+        <Search className="size-4 shrink-0" aria-hidden="true" />
+        <span className="hidden truncate md:inline">Search documentation…</span>
+        <DocsShortcut className="hidden md:flex" />
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog open={open} onOpenChange={onOpenChange}>
         <CommandInput placeholder="Search documentation…" />
         <CommandList>
           <CommandEmpty>No results.</CommandEmpty>
           {Object.entries(
             items.reduce<Map<string, SearchItem[]>>((map, item) => {
               return map.set(item.section, [...(map.get(item.section) ?? []), item])
-            }, new Map())
-          ).map(([section, sectionItems]) => (
+            }, new Map()),
+          ).map(([section, sectionItems]: [string, SearchItem[]]) => (
             <CommandGroup key={section} heading={section}>
               {sectionItems.map((item) => (
                 <CommandItem
                   key={item.slug}
                   value={item.haystack}
                   onSelect={() => {
-                    setOpen(false)
+                    onOpenChange(false)
                     navigate(item.slug ? `/docs/${item.slug}` : '/docs')
                   }}
                 >
@@ -72,7 +89,9 @@ export function DocsSearch() {
                   <span className="flex flex-col gap-0.5">
                     <span>{item.title}</span>
                     {item.description && (
-                      <span className="truncate text-xs text-muted-foreground">{item.description}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {item.description}
+                      </span>
                     )}
                   </span>
                 </CommandItem>

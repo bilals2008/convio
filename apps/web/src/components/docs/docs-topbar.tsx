@@ -3,7 +3,6 @@ import { Gauge, LogIn, Menu } from 'lucide-react'
 import { DocsSearch } from '@/components/docs/docs-search'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/lib/auth-context'
 
 const GITHUB_URL = 'https://github.com/bilals2008/convio-ai'
@@ -17,15 +16,23 @@ function GitHubLogo({ className }: { className?: string }) {
   )
 }
 
-export function DocsTopbar({ onOpenNav }: { onOpenNav: () => void }) {
+export function DocsTopbar({
+  onOpenNav,
+  searchOpen,
+  onSearchOpenChange,
+}: {
+  onOpenNav: () => void
+  searchOpen: boolean
+  onSearchOpenChange: (open: boolean) => void
+}) {
   const { isAuthenticated, isLoading } = useAuth()
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center gap-3 px-4">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 w-full max-w-[85rem] items-center gap-3 px-4 sm:gap-4 sm:px-6">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden"
+          className="-ml-2 lg:hidden"
           onClick={onOpenNav}
           aria-label="Open navigation"
         >
@@ -33,20 +40,22 @@ export function DocsTopbar({ onOpenNav }: { onOpenNav: () => void }) {
         </Button>
 
         <Link to="/" className="flex shrink-0 items-center gap-2" aria-label="Convio home">
-          <img src="/logo.png" alt="" className="h-5 w-auto" />
-          <span className="font-heading text-sm font-bold">Convio</span>
+          <img src="/logo.png" alt="" className="h-6 w-auto" />
+          <span className="font-heading text-[15px] font-semibold tracking-tight">Convio</span>
+          <span className="text-[15px] text-muted-foreground">Docs</span>
         </Link>
 
-        <Separator orientation="vertical" className="h-4" />
+        {/* Centred on the free space, so it reads as the bar's primary action rather
+            than another control in a row — the way a docs search is meant to be found. */}
+        <div className="flex flex-1 justify-end md:justify-center md:px-4">
+          <DocsSearch open={searchOpen} onOpenChange={onSearchOpenChange} />
+        </div>
 
-        <span className="text-sm text-muted-foreground">Docs</span>
-
-        <div className="ml-auto flex items-center gap-2">
-          <DocsSearch />
-
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           <Button
             variant="ghost"
             size="icon"
+            className="hidden sm:inline-flex"
             nativeButton={false}
             render={
               <a href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="Convio on GitHub" />
@@ -59,6 +68,7 @@ export function DocsTopbar({ onOpenNav }: { onOpenNav: () => void }) {
 
           {!isLoading && (
             <Button
+              variant="outline"
               size="sm"
               nativeButton={false}
               render={<Link to={isAuthenticated ? '/dashboard' : '/login'} />}
@@ -66,12 +76,12 @@ export function DocsTopbar({ onOpenNav }: { onOpenNav: () => void }) {
               {isAuthenticated ? (
                 <>
                   <Gauge />
-                  Dashboard
+                  <span className="hidden sm:inline">Dashboard</span>
                 </>
               ) : (
                 <>
                   <LogIn />
-                  Log in
+                  <span className="hidden sm:inline">Log in</span>
                 </>
               )}
             </Button>
