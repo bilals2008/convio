@@ -9,6 +9,79 @@ export interface PlanLimits {
   organizations: number
 }
 
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+export function formatUsd(value: number): string {
+  return `$${Number.isInteger(value) ? value : value.toFixed(2)}`
+}
+
+// A plan has ONE price per period. The amounts are what the provider charges; the display
+// strings the pricing page renders are derived from them here, so the two can never drift
+// and an admin never has to type the same number twice. A plan with no amount is not
+// self-serve, so it reads "Custom".
+export function planDisplayPricing(amounts: {
+  priceMonthly: number | null
+  priceYearly: number | null
+}): { price: string; yearlyPrice: string | null } {
+  return {
+    price: amounts.priceMonthly === null ? 'Custom' : formatUsd(amounts.priceMonthly),
+    yearlyPrice: amounts.priceYearly === null ? null : formatUsd(round2(amounts.priceYearly / 12)),
+  }
+}
+
+// Resolve the amounts a plan row will end up with. The yearly total is ALWAYS derived from
+// the monthly amount and the discount, so there is no second figure to keep in step and a
+// price edit can never leave a stale yearly amount behind.
+export function planAmounts(
+  before: { priceMonthly: number | null; priceYearly: number | null; yearlyDiscountPercent: number | null },
+  patch: Record<string, unknown>,
+): { monthly: number | null; discount: number | null; yearly: number | null } {
+  type AmountKey = 'priceMonthly' | 'yearlyDiscountPercent'
+  const pick = (key: AmountKey): number | null =>
+    (key in patch ? (patch[key] as number | null) : before[key]) ?? null
+
+  const monthly = pick('priceMonthly')
+  const discount = pick('yearlyDiscountPercent')
+  if (monthly === null) return { monthly, discount, yearly: null }
+  return { monthly, discount, yearly: round2(monthly * 12 * (1 - (discount ?? 0) / 100)) }
+}
+
+// Write the derived display fields alongside whatever the caller sent.
+export function withDerivedPricing(
+  data: Record<string, unknown>,
+  amounts: { monthly: number | null; discount: number | null; yearly: number | null },
+): Record<string, unknown> {
+  return {
+    ...data,
+    priceMonthly: amounts.monthly,
+    yearlyDiscountPercent: amounts.discount,
+    priceYearly: amounts.yearly,
+    ...planDisplayPricing({ priceMonthly: amounts.monthly, priceYearly: amounts.yearly }),
+  }
+}
+
+// Merge a limits patch onto the saved limits. `toPlanLimits` reads a MISSING key as
+// unlimited, so replacing the object wholesale would silently turn every limit the caller
+// did not mention into Infinity. Each limit has to be resolved individually.
+export function mergeLimits(
+  before: unknown,
+  patch: unknown,
+): { agents: number | null; messagesPerMonth: number | null; knowledgeBases: number | null; organizations: number | null } | undefined {
+  if (patch === undefined) return undefined
+  const prev = (before ?? {}) as Record<string, unknown>
+  const next = (patch ?? {}) as Record<string, unknown>
+  const pick = (key: string) => {
+    if (key in next) return (next[key] ?? null) as number | null
+    return (prev[key] ?? null) as number | null
+  }
+  return {
+    agents: pick('agents'),
+    messagesPerMonth: pick('messagesPerMonth'),
+    knowledgeBases: pick('knowledgeBases'),
+    organizations: pick('organizations'),
+  }
+}
+
 export interface PlanDef {
   key: string
   label: string
@@ -68,7 +141,7 @@ function toPlanDef(row: Prisma.PlanGetPayload<object>): PlanDef {
     label: row.name,
     features,
     limits,
-    price: row.price ?? '$0',
+    price: planDisplayPricing({ priceMonthly: row.priceMonthly, priceYearly: row.priceYearly }).price,
     priceMonthly: row.priceMonthly ?? 0,
     comingSoon: row.comingSoon,
     providerMonthlyProductId: row.providerMonthlyProductId ?? staticPlan?.providerMonthlyProductId ?? undefined,
@@ -106,16 +179,13 @@ export async function getPlanDef(key: string): Promise<PlanDef | undefined> {
   }
 }
 
-const STATIC_TIER: Record<string, number> = { free: 0, pro: 1, business: 2, enterprise: 3 }
-
+// Tiers come from the plan rows alone, ordered by the admin-controlled sortOrder. Keys with
+// no row are deliberately absent: fabricating a tier for them let a renamed or deleted plan
+// key outrank every real plan.
 export async function getPlanTierMap(): Promise<Record<string, number>> {
   const plans = await getAllPlans()
   const map: Record<string, number> = {}
   plans.forEach((p, i) => { map[p.key] = i })
-  let next = plans.length
-  for (const key of Object.keys(STATIC_TIER)) {
-    if (!(key in map)) map[key] = next++
-  }
   return map
 }
 

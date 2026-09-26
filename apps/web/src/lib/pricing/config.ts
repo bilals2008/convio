@@ -21,6 +21,9 @@ export interface PlanConfig {
   name: string
   description: string
   price: string
+  priceMonthly?: number
+  priceYearly?: number
+  yearlyDiscountPercent?: number
   yearlyPrice?: string
   period: string
   badge?: string
@@ -49,6 +52,40 @@ export function getPlanFeatures(planKey: string): PlanLimits {
   const plan = pricingConfig.plans.find((p) => p.key === planKey)
   if (!plan) return DEFAULT_LIMITS
   return plan.limits
+}
+
+function parseMoney(value?: string | null): number | null {
+  if (!value) return null
+  const parsed = Number(value.replace(/[^0-9.]/g, ''))
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+export function formatUsd(value: number): string {
+  return `$${Number.isInteger(value) ? value : value.toFixed(2)}`
+}
+
+// The yearly card shows the amount actually charged once a year. The API sends it as a
+// number, while the fallback config only has the per-month display string.
+export function yearlyAnnualTotal(plan: PlanConfig): number | null {
+  if (typeof plan.priceYearly === 'number') return plan.priceYearly
+  const perMonth = parseMoney(plan.yearlyPrice)
+  return perMonth === null ? null : perMonth * 12
+}
+
+// The billing toggle advertises the real saving, so the badge is derived from the plan
+// amounts instead of being hardcoded.
+export function yearlyDiscountLabel(plans: PlanConfig[]): string | null {
+  const percents: number[] = []
+  for (const plan of plans) {
+    const monthly = typeof plan.priceMonthly === 'number' ? plan.priceMonthly : parseMoney(plan.price)
+    const annual = yearlyAnnualTotal(plan)
+    if (monthly === null || annual === null || monthly <= 0 || annual <= 0) continue
+    const percent = Math.floor((1 - annual / (monthly * 12)) * 100)
+    if (percent > 0) percents.push(percent)
+  }
+  if (percents.length === 0) return null
+  const max = Math.max(...percents)
+  return percents.every((p) => p === max) ? `Save ${max}%` : `Save up to ${max}%`
 }
 
 const NUMERIC_LIMIT_KEYS = ['agents', 'messagesPerMonth', 'knowledgeBases', 'organizations'] as const
@@ -81,6 +118,11 @@ export const DEFAULT_LIMITS: PlanLimits = {
   guardrails: false,
 }
 
+// Seed data ONLY. These are the capability flags the plans API does not send, plus a
+// brief placeholder for the first paint. The `price` / `yearlyPrice` values below are NOT
+// authoritative — the plan rows in the database are, and they are what checkout charges.
+// Never render these on a failed fetch: usePricingPlanList clears the list instead, so a
+// deleted plan is never re-advertised at a stale price.
 export const pricingConfig: PricingConfig = {
   section: {
     eyebrow: 'Pricing',

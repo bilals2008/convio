@@ -605,6 +605,7 @@ model Plan {
   price                    String?
   priceMonthly             Float?
   priceYearly              Float?
+  yearlyDiscountPercent    Float?
   yearlyPrice              String?
   period                   String?
   badge                    String?

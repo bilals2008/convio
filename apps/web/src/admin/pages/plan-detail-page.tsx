@@ -46,37 +46,50 @@ import {
   adminApi,
   type AdminPlan,
   type CreemPeriod,
+  type CreemSyncResult,
   type PlanCreemPeriodStatus,
 } from '@/admin/services/admin-api'
 import { cn } from '@/lib/utils'
 
+// A blank limit means unlimited, so a typo must not become "unlimited" by accident: NaN
+// serialises to null on the wire, which the API reads as no limit. Reject it here.
+const limitValue = z.string().refine((v) => v.trim() === '' || (!Number.isNaN(Number(v)) && Number(v) >= 0), {
+  message: 'Enter a number',
+})
+
+// The API caps these too. Mirroring the caps here turns a raw "Validation failed" toast
+// into an inline field error; the server stays the authority.
 const planFormSchema = z.object({
   key: z.string().trim().min(1, 'Plan key is required').max(50, 'Key must be 50 characters or less'),
-  name: z.string().trim().min(1, 'Plan name is required').max(80, 'Name must be 80 characters or less'),
-  description: z.string(),
-  price: z.string(),
-  priceMonthly: z.string().refine((v) => v.trim() === '' || !Number.isNaN(Number(v)), { message: 'Enter a number' }),
-  priceYearly: z.string().refine((v) => v.trim() === '' || !Number.isNaN(Number(v)), { message: 'Enter a number' }),
-  yearlyPrice: z.string(),
-  period: z.string(),
-  badge: z.string(),
-  cta: z.string(),
-  href: z.string(),
+  name: z.string().trim().min(1, 'Plan name is required').max(100, 'Name must be 100 characters or less'),
+  description: z.string().max(300, 'Description must be 300 characters or less'),
+  priceMonthly: z.string().refine((v) => v.trim() === '' || (!Number.isNaN(Number(v)) && Number(v) >= 0), { message: 'Enter a number' }),
+  yearlyDiscountPercent: z.string().refine(
+    (v) => v.trim() !== '' && !Number.isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 99,
+    { message: 'Enter 0–99' },
+  ),
+  period: z.string().max(20, 'Must be 20 characters or less'),
+  badge: z.string().max(50, 'Must be 50 characters or less'),
+  cta: z.string().max(50, 'Must be 50 characters or less'),
+  href: z.string().max(300, 'Must be 300 characters or less'),
   variant: z.string(),
-  icon: z.string(),
-  iconColor: z.string(),
-  sortOrder: z.string().refine((v) => v.trim() === '' || !Number.isNaN(Number(v)), { message: 'Enter a number' }),
-  trialPeriodDays: z.string().refine((v) => v.trim() === '' || Number(v) >= 1, { message: 'Enter 1 or more days' }),
+  icon: z.string().max(30, 'Must be 30 characters or less'),
+  iconColor: z.string().max(50, 'Must be 50 characters or less'),
+  sortOrder: z.string().refine((v) => v.trim() === '' || (!Number.isNaN(Number(v)) && Number(v) >= 0), { message: 'Enter a number or higher' }),
+  trialPeriodDays: z.string().refine((v) => v.trim() === '' || (Number(v) >= 1 && Number(v) <= 365), { message: 'Enter 1–365' }),
   highlighted: z.boolean(),
   comingSoon: z.boolean(),
   active: z.boolean(),
-  featuresText: z.string(),
-  agents: z.string(),
-  messagesPerMonth: z.string(),
-  knowledgeBases: z.string(),
-  organizations: z.string(),
-  providerMonthlyProductId: z.string(),
-  providerYearlyProductId: z.string(),
+  featuresText: z.string().refine(
+    (v) => v.split('\n').filter((l) => l.trim()).length <= 100 && v.split('\n').every((l) => l.trim().length <= 200),
+    { message: 'Max 100 lines, 200 characters each' },
+  ),
+  agents: limitValue,
+  messagesPerMonth: limitValue,
+  knowledgeBases: limitValue,
+  organizations: limitValue,
+  providerMonthlyProductId: z.string().max(200, 'Must be 200 characters or less'),
+  providerYearlyProductId: z.string().max(200, 'Must be 200 characters or less'),
 })
 
 type PlanFormValues = z.infer<typeof planFormSchema>
@@ -85,10 +98,8 @@ const CREATE_DEFAULTS: PlanFormValues = {
   key: '',
   name: '',
   description: '',
-  price: '',
   priceMonthly: '',
-  priceYearly: '',
-  yearlyPrice: '',
+  yearlyDiscountPercent: '0',
   period: '',
   badge: '',
   cta: '',
@@ -114,10 +125,8 @@ const toPlanValues = (plan?: AdminPlan): PlanFormValues => ({
   key: plan?.key ?? '',
   name: plan?.name ?? '',
   description: plan?.description ?? '',
-  price: plan?.price ?? '',
   priceMonthly: plan?.priceMonthly?.toString() ?? '',
-  priceYearly: plan?.priceYearly?.toString() ?? '',
-  yearlyPrice: plan?.yearlyPrice ?? '',
+  yearlyDiscountPercent: plan?.yearlyDiscountPercent?.toString() ?? '0',
   period: plan?.period ?? '',
   badge: plan?.badge ?? '',
   cta: plan?.cta ?? '',
@@ -142,6 +151,38 @@ const toPlanValues = (plan?: AdminPlan): PlanFormValues => ({
 function formatCents(cents: number | null, currency = 'USD') {
   if (cents === null) return '—'
   return `${(cents / 100).toFixed(2)} ${currency}`
+}
+
+function formatMoney(value: number) {
+  return `$${Number.isInteger(value) ? value : value.toFixed(2)}`
+}
+
+// Mirrors the API rule: the yearly total is always derived from the monthly amount.
+function deriveYearly(monthly: number, discountPercent: number) {
+  const total = Math.round(monthly * 12 * (1 - discountPercent / 100) * 100) / 100
+  const perMonth = Math.round((total / 12) * 100) / 100
+  return { total, label: formatMoney(perMonth) }
+}
+
+// A save pushes Creem-relevant changes to linked products. Sync trouble is loud on
+// purpose: checkout would otherwise keep charging the old amount.
+function reportCreemSync(results: CreemSyncResult[]) {
+  const periodLabel = (period: CreemPeriod) => (period === 'yearly' ? 'yearly' : 'monthly')
+  const failed = results.filter((r) => r.status === 'failed')
+  const skipped = results.filter((r) => r.status === 'skipped')
+  const synced = results.filter((r) => r.status === 'synced')
+
+  if (failed.length > 0) {
+    const detail = failed.map((r) => `${periodLabel(r.period)}: ${r.message ?? 'sync failed'}`).join('; ')
+    toast.error(`Plan saved, but Creem sync failed — ${detail}`)
+  } else if (skipped.length > 0) {
+    const detail = skipped.map((r) => `${periodLabel(r.period)}: ${r.message ?? 'not updated'}`).join('; ')
+    toast.warning(`Plan saved. Creem not updated — ${detail}`)
+  } else if (synced.length > 0) {
+    toast.success(`Plan updated and synced to Creem (${synced.map((r) => periodLabel(r.period)).join(' + ')})`)
+  } else {
+    toast.success('Plan updated')
+  }
 }
 
 function CreemPeriodRow({
@@ -191,7 +232,6 @@ function CreemPeriodRow({
       {status.product && (
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
           <span>Creem: {status.product.name}</span>
-          <span>{formatCents(status.product.price, status.product.currency)}</span>
           <span className={cn(status.product.status !== 'active' && 'text-destructive')}>{status.product.status}</span>
           <span>{status.product.trialPeriodDays ? `${status.product.trialPeriodDays}d trial` : 'no trial'}</span>
         </div>
@@ -260,9 +300,13 @@ export default function AdminPlanDetailPage() {
   const saveMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
       isEdit && plan ? adminApi.updatePlan(plan.id, payload) : adminApi.createPlan(payload),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] })
-      toast.success(isEdit ? 'Plan updated' : 'Plan created')
+      queryClient.invalidateQueries({ queryKey: ['admin', 'creem'] })
+      // The public pricing pages render these same plan rows.
+      queryClient.invalidateQueries({ queryKey: ['pricing', 'plans'] })
+      if (isEdit && 'creemSync' in result.data) reportCreemSync(result.data.creemSync)
+      else toast.success('Plan created')
       navigate('/admin/pricing')
     },
     onError: (error: Error) => toast.error(error.message || 'Unable to save plan. Please try again.'),
@@ -272,6 +316,8 @@ export default function AdminPlanDetailPage() {
     mutationFn: () => adminApi.deletePlan(plan!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'creem'] })
+      queryClient.invalidateQueries({ queryKey: ['pricing', 'plans'] })
       toast.success('Plan deleted')
       navigate('/admin/pricing')
     },
@@ -286,19 +332,30 @@ export default function AdminPlanDetailPage() {
   const isActive = useWatch({ control: form.control, name: 'active' })
   const trialDays = useWatch({ control: form.control, name: 'trialPeriodDays' })
   const previewName = useWatch({ control: form.control, name: 'name' })
-  const previewPrice = useWatch({ control: form.control, name: 'price' })
   const previewBadge = useWatch({ control: form.control, name: 'badge' })
+  const discountInput = useWatch({ control: form.control, name: 'yearlyDiscountPercent' })
+  const monthlyInput = useWatch({ control: form.control, name: 'priceMonthly' })
+  // The yearly total is always derived, exactly as the API derives it, so the form and the
+  // pricing card can never show different numbers.
+  const derivedYearly = useMemo(() => {
+    const monthly = Number(monthlyInput)
+    const discount = Number(discountInput)
+    if (monthlyInput.trim() === '' || Number.isNaN(monthly) || Number.isNaN(discount)) return null
+    return deriveYearly(monthly, discount)
+  }, [monthlyInput, discountInput])
+  const previewPrice =
+    monthlyInput.trim() === '' || Number.isNaN(Number(monthlyInput)) ? '—' : formatMoney(Number(monthlyInput))
 
   const handleSubmit = form.handleSubmit((data) => {
     const num = (s: string) => (s.trim() === '' ? null : Number(s))
+    // Only the monthly amount and the discount are entered; the yearly total and the price
+    // shown on the card come back derived from them.
     saveMutation.mutate({
       key: data.key.trim(),
       name: data.name.trim(),
       description: data.description || null,
-      price: data.price || null,
       priceMonthly: num(data.priceMonthly),
-      priceYearly: num(data.priceYearly),
-      yearlyPrice: data.yearlyPrice || null,
+      yearlyDiscountPercent: num(data.yearlyDiscountPercent),
       period: data.period || null,
       badge: data.badge || null,
       highlighted: data.highlighted,
@@ -447,22 +504,28 @@ export default function AdminPlanDetailPage() {
             </FormField>
           </CardSection>
 
-          <CardSection icon={CreditCard} title="Pricing" description="Display values and the numeric amounts sent to Creem.">
+          <CardSection icon={CreditCard} title="Pricing" description="The amount charged per period. The yearly total and the price on the card are calculated from these.">
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Price (display)" hint="Shown on the pricing card">
-                <Input className="h-9" placeholder="$39/mo" {...form.register('price')} />
-              </FormField>
-              <FormField label="Monthly amount ($)" error={form.formState.errors.priceMonthly?.message} hint="Charged each month">
+              <FormField label="Monthly amount ($)" error={form.formState.errors.priceMonthly?.message} hint="Charged each month. Leave blank for a custom-priced plan.">
                 <Input className="h-9" type="number" min="0" step="0.01" placeholder="39" {...form.register('priceMonthly')} />
               </FormField>
-              <FormField label="Yearly price (display)" hint="Shown as the yearly rate, usually per month">
-                <Input className="h-9" placeholder="$31" {...form.register('yearlyPrice')} />
-              </FormField>
-              <FormField label="Yearly amount ($)" error={form.formState.errors.priceYearly?.message} hint="Charged once per year — the total">
-                <Input className="h-9" type="number" min="0" step="0.01" placeholder="372" {...form.register('priceYearly')} />
+              <FormField label="Yearly discount %" error={form.formState.errors.yearlyDiscountPercent?.message} hint="Off the yearly total. 0 = no discount.">
+                <Input className="h-9" type="number" min="0" max="99" step="1" {...form.register('yearlyDiscountPercent')} />
               </FormField>
               <FormField label="Period">
                 <Input className="h-9" placeholder="/month" {...form.register('period')} />
+              </FormField>
+              <FormField
+                label="Yearly amount ($)"
+                hint={derivedYearly ? `Calculated — ${derivedYearly.label}/month when billed yearly` : 'Set a monthly amount to calculate this'}
+              >
+                <Input
+                  className="h-9 bg-muted/40 tabular-nums"
+                  readOnly
+                  tabIndex={-1}
+                  value={derivedYearly?.total ?? ''}
+                  placeholder="—"
+                />
               </FormField>
               <FormField
                 label="Trial days"
@@ -514,16 +577,16 @@ export default function AdminPlanDetailPage() {
               <Textarea rows={8} className="font-mono text-xs" placeholder={'10 AI agents\n25,000 messages/mo\nAll channels'} {...form.register('featuresText')} />
             </FormField>
             <div className="mt-4 grid grid-cols-2 gap-4">
-              <FormField label="Agents">
+              <FormField label="Agents" error={form.formState.errors.agents?.message}>
                 <Input className="h-9" type="number" min="0" step="1" placeholder="∞" {...form.register('agents')} />
               </FormField>
-              <FormField label="Messages / mo">
+              <FormField label="Messages / mo" error={form.formState.errors.messagesPerMonth?.message}>
                 <Input className="h-9" type="number" min="0" step="1" placeholder="∞" {...form.register('messagesPerMonth')} />
               </FormField>
-              <FormField label="Knowledge bases">
+              <FormField label="Knowledge bases" error={form.formState.errors.knowledgeBases?.message}>
                 <Input className="h-9" type="number" min="0" step="1" placeholder="∞" {...form.register('knowledgeBases')} />
               </FormField>
-              <FormField label="Organizations">
+              <FormField label="Organizations" error={form.formState.errors.organizations?.message}>
                 <Input className="h-9" type="number" min="0" step="1" placeholder="∞" {...form.register('organizations')} />
               </FormField>
             </div>
@@ -587,7 +650,7 @@ export default function AdminPlanDetailPage() {
               </div>
             </CardSection>
 
-            <CardSection icon={Plug} title="Creem" description="Products that power checkout and webhook mapping.">
+            <CardSection icon={Plug} title="Creem" description="Products that power checkout and webhook mapping. Saving a plan syncs linked products automatically.">
               {!isEdit || !plan ? (
                 <p className="text-xs text-muted-foreground">
                   Save the plan first — Creem products are linked to a saved plan.
@@ -640,8 +703,13 @@ export default function AdminPlanDetailPage() {
                   )}
                 </div>
                 <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-2xl font-semibold tabular-nums">{previewPrice || '—'}</span>
+                  <span className="text-2xl font-semibold tabular-nums">{previewPrice}</span>
                 </div>
+                {derivedYearly && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Yearly: {formatMoney(derivedYearly.total)} ({derivedYearly.label}/mo)
+                  </p>
+                )}
                 {trialDays && (
                   <p className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-600">
                     <Check className="size-3" />

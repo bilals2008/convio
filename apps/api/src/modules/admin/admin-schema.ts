@@ -77,10 +77,11 @@ export const planSchema = z.object({
   key: z.string().min(1).max(50),
   name: z.string().min(1).max(100),
   description: z.string().max(300).nullish(),
-  price: z.string().max(50).nullish(),
+  // The monthly amount and the yearly discount are the only price inputs. `priceYearly`
+  // and the display `price` / `yearlyPrice` are all derived from them by the service, so a
+  // client can never send a figure that disagrees with what the provider charges.
   priceMonthly: z.coerce.number().min(0).nullish(),
-  priceYearly: z.coerce.number().min(0).nullish(),
-  yearlyPrice: z.string().max(50).nullish(),
+  yearlyDiscountPercent: z.coerce.number().min(0).max(99).nullish(),
   period: z.string().max(20).nullish(),
   badge: z.string().max(50).nullish(),
   highlighted: z.boolean().default(false),
