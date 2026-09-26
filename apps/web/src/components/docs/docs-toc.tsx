@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { LifeBuoy, ListTree } from 'lucide-react'
-import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { DocHeading } from '@/lib/docs/content'
 
 /**
- * Anchors land below the 56px topbar; this is the band the observer uses to decide which
+ * Anchors land below the 4rem topbar; this is the band the observer uses to decide which
  * heading is "current", so the offset and the anchor clearance stay in step. Intersection
  * Observer accepts only px and percent — a rem value throws a DOMException.
  */
@@ -48,12 +45,12 @@ export function DocsToc({
   if (headings.length === 0) return null
 
   return (
-    <nav aria-label="On this page" className="flex flex-col py-6">
-      <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        <ListTree className="size-3.5" aria-hidden="true" />
-        On this page
-      </p>
-      <ul className="flex flex-col gap-0.5 border-l border-border">
+    <nav aria-label="On this page" className="flex flex-col py-8">
+      <p className="mb-3 text-[12px] font-semibold text-foreground">On this page</p>
+      {/* Every item carries its own rule, so the list reads as one continuous hairline
+          and the active item just recolours its own segment. A border on <ul> would
+          be hidden: `-ml-px` puts each item's rule exactly on top of it. */}
+      <ul className="flex flex-col">
         {headings.map((heading) => (
           <li key={heading.id}>
             <a
@@ -61,11 +58,11 @@ export function DocsToc({
               onClick={onNavigate}
               aria-current={activeId === heading.id ? 'location' : undefined}
               className={cn(
-                '-ml-px block border-l py-1 pr-2 text-sm leading-snug transition-colors',
-                heading.level === 2 ? 'pl-3' : 'pl-6 text-[13px]',
+                '-ml-px block border-l-2 py-1.5 pr-2 text-[13px] leading-snug transition-colors duration-200 ease-out',
+                heading.level === 2 ? 'pl-3.5' : 'pl-6 text-xs',
                 activeId === heading.id
                   ? 'border-primary font-medium text-primary'
-                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground'
+                  : 'border-border text-muted-foreground hover:text-foreground'
               )}
             >
               {heading.text}
@@ -73,24 +70,6 @@ export function DocsToc({
           </li>
         ))}
       </ul>
-
-      <div className="mt-8 flex flex-col gap-2 rounded-lg border border-border bg-muted/40 p-4">
-        <p className="flex items-center gap-2 text-sm font-medium">
-          <LifeBuoy className="size-4 text-primary" aria-hidden="true" />
-          Need a hand?
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Talk to our team about migrating an existing agent, a custom channel, or a plan that
-          fits your volume.
-        </p>
-        <Link
-          to="/contact"
-          onClick={onNavigate}
-          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'self-start')}
-        >
-          Talk to our team
-        </Link>
-      </div>
     </nav>
   )
 }

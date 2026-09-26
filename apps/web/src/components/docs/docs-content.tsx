@@ -43,7 +43,7 @@ const components: Components = {
 
 export function DocsContent({ body }: { body: string }) {
   return (
-    <article className="typeset typeset-docs max-w-[42rem]">
+    <article className="typeset typeset-docs max-w-[44rem]">
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[unwrapImages]} components={components}>
         {body}
       </ReactMarkdown>
