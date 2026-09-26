@@ -1,3 +1,5 @@
+import { extractHeadings } from './markdown'
+
 export interface SearchItem {
   slug: string
   title: string
@@ -33,7 +35,9 @@ export function buildSearchIndex(): SearchItem[] {
           .split('\n')
           .map((line) => line.trim())
           .find((line) => line && !line.startsWith('#') && !line.startsWith('```')) ?? ''
-      const headings = [...raw.matchAll(/^#{2,3}\s+(.+)$/gm)].map((m) => m[2].trim()).join(' ')
+      const headings = extractHeadings(raw)
+        .map((heading) => heading.text)
+        .join(' ')
 
       return {
         slug,

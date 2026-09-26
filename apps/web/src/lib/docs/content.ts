@@ -1,8 +1,6 @@
-export interface DocHeading {
-  id: string
-  text: string
-  level: 2 | 3
-}
+import { extractHeadings, type DocHeading } from './markdown'
+
+export type { DocHeading }
 
 export interface Doc {
   slug: string
@@ -21,14 +19,6 @@ const modules = import.meta.glob('/src/content/docs/**/*.md', {
 
 const PREFIX = '/src/content/docs/'
 
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-}
-
 function parse(slug: string, raw: string): Doc {
   const title = /^#\s+(.+)$/m.exec(raw)?.[1]?.trim() ?? 'Untitled'
 
@@ -38,13 +28,7 @@ function parse(slug: string, raw: string): Doc {
       .map((line) => line.trim())
       .find((line) => line && !line.startsWith('#') && !line.startsWith('```') && !line.startsWith('>')) ?? ''
 
-  const headings: DocHeading[] = [...raw.matchAll(/^(#{2,3})\s+(.+)$/gm)].map((m) => ({
-    id: slugify(m[2]),
-    text: m[2].trim(),
-    level: m[1].length as 2 | 3,
-  }))
-
-  return { slug, title, description, body: raw, headings }
+  return { slug, title, description, body: raw, headings: extractHeadings(raw) }
 }
 
 export async function getDoc(slug: string): Promise<Doc | null> {
