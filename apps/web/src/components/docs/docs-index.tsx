@@ -65,19 +65,6 @@ export function DocsIndex() {
               </li>
             ))}
         </ul>
-
-        <p className="mt-8 text-sm text-muted-foreground">
-          Convio is MIT licensed and{' '}
-          <a
-            href="https://github.com/bilals2008/convio-ai"
-            target="_blank"
-            rel="noreferrer"
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            open source on GitHub
-          </a>
-          . Found something wrong? Open an issue.
-        </p>
       </div>
     </DocsShell>
   )

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { FileText, Search } from 'lucide-react'
 import {
   CommandDialog,
@@ -9,12 +10,19 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import type { SearchItem } from '@/lib/docs/search-index'
 
 export function DocsSearch() {
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState<SearchItem[]>([])
   const navigate = useNavigate()
+
+  // The corpus is a lazily imported module, not server state — but it is still an
+  // async load, so it goes through the query cache rather than an effect.
+  const { data: items = [] } = useQuery({
+    queryKey: ['docs-search-index'],
+    queryFn: async () => (await import('@/lib/docs/search-index')).buildSearchIndex(),
+    enabled: open,
+    staleTime: Infinity,
+  })
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -26,11 +34,6 @@ export function DocsSearch() {
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [])
-
-  useEffect(() => {
-    if (!open || items.length > 0) return
-    void import('@/lib/docs/search-index').then((m) => setItems(m.buildSearchIndex()))
-  }, [open, items.length])
 
   return (
     <>

@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Menu } from 'lucide-react'
+import { Gauge, LogIn, Menu } from 'lucide-react'
 import { DocsSearch } from '@/components/docs/docs-search'
 import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { useAuth } from '@/lib/auth-context'
 
 const GITHUB_URL = 'https://github.com/bilals2008/convio-ai'
 
@@ -17,6 +18,7 @@ function GitHubLogo({ className }: { className?: string }) {
 }
 
 export function DocsTopbar({ onOpenNav }: { onOpenNav: () => void }) {
+  const { isAuthenticated, isLoading } = useAuth()
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center gap-3 px-4">
@@ -45,6 +47,7 @@ export function DocsTopbar({ onOpenNav }: { onOpenNav: () => void }) {
           <Button
             variant="ghost"
             size="icon"
+            nativeButton={false}
             render={
               <a href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="Convio on GitHub" />
             }
@@ -54,15 +57,25 @@ export function DocsTopbar({ onOpenNav }: { onOpenNav: () => void }) {
 
           <ThemeToggle />
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="hidden sm:inline-flex"
-            render={<Link to="/" />}
-          >
-            <ArrowLeft />
-            Back to site
-          </Button>
+          {!isLoading && (
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link to={isAuthenticated ? '/dashboard' : '/login'} />}
+            >
+              {isAuthenticated ? (
+                <>
+                  <Gauge />
+                  Dashboard
+                </>
+              ) : (
+                <>
+                  <LogIn />
+                  Log in
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </header>
