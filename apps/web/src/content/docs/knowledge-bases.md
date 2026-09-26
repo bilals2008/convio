@@ -25,6 +25,11 @@ Attach it to an agent on the agent's **Knowledge** section. One knowledge base c
 
 Each document has a status, and it starts as **pending** while it is being processed. Wait for it to leave that state before testing retrieval — a half-indexed document will return partial answers, and people usually blame the prompt.
 
+> [!TIP]
+> **Wait for `ready` before you test**
+>
+> A document still processing returns partial chunks, which looks exactly like a bad prompt. Check the status first — it saves an hour of rewriting something that was never broken.
+
 Documents can be files or URLs. Anything that changes often is better as a URL than an upload.
 
 You can delete a document without touching the rest of the base.

@@ -20,6 +20,11 @@ From **Widgets → New**, pick the agent, name it, and configure the look. Then 
 
 Turn it on before you go live. A public key with no allowlist means anyone can embed your agent on their site, and you will pay for their traffic.
 
+> [!WARNING]
+> **Set the allowlist before you publish**
+>
+> `allowedDomains` is empty by default, so a public key loads anywhere. Anyone who finds it can put your agent on their site and run up your bill.
+
 ### Widget status
 
 Widgets have their own status and also start as **draft**. A draft widget renders nothing. This is separate from the agent's status — a widget can be draft while its agent is active, and that is the normal state before you publish.
@@ -35,6 +40,8 @@ Beyond the widget, agents can be published to messaging and telephony surfaces. 
 - **Twilio** — SMS and voice
 
 Each is a deployment with its own credentials and configuration. The agent, prompt, knowledge, and tools are shared — you are publishing the same brain to a different surface, not rebuilding it.
+
+![The deployment list, showing one agent published to several channels at once](https://placehold.co/1280x720)
 
 ## Deploying
 

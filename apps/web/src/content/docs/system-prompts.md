@@ -41,6 +41,11 @@ Style: plain sentences, no more than 4 sentences unless asked for detail.
 
 **Forbid the guess.** "If you do not know, say so" is the highest-value line in most prompts. Without it, models invent plausible policy.
 
+> [!IMPORTANT]
+> **One line does more work than the rest of the prompt**
+>
+> "If you do not know, say so and hand off. Never guess at a policy." It is the difference between an agent that admits the gap and one that invents a refund window that does not exist.
+
 **Make it checkable.** "Never quote a refund amount without confirming the invoice ID" is verifiable. "Be helpful" is not — drop it.
 
 **Keep it short.** Long prompts cost tokens on every request and dilute the instructions that matter. If a rule matters, put it near the top.

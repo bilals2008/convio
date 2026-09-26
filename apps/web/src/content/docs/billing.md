@@ -18,6 +18,11 @@ Check **Settings → Billing** for the limits that apply to you. The ones that b
 
 Plan changes take effect on the current billing period, not immediately, unless you are changing at the period boundary.
 
+> [!NOTE]
+> **Bring-your-own keys are billed by your provider**
+>
+> Calls made with your own OpenRouter, OpenAI or Anthropic key do not appear in Convio's metering at all. If two invoices disagree, check here first.
+
 ## Trials
 
 A plan can carry a trial period, in days. The subscription records `trialEndsAt`, and you can see where you stand under **Settings → Billing**.

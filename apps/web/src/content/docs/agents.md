@@ -35,6 +35,8 @@ A template creates a real agent with a system prompt and a suggested temperature
 
 The editor has five sections: **Overview**, **Builder** (prompt, model, behavior), **Knowledge**, **Capabilities** (tools and MCP), and **Analytics**.
 
+![The agent editor, showing the Overview, Builder, Knowledge, and Capabilities sections](https://placehold.co/1280x720)
+
 The one thing to do immediately: set the **status**. Draft agents do not accept conversations.
 
 ## Choosing a model
@@ -60,6 +62,11 @@ The one thing to do immediately: set the **status**. Draft agents do not accept 
 **Very long documents** — Gemini Pro and Flash carry 65k; OpenRouter's Gemini entries go higher. Everything else sits at 32k–200k.
 
 **Reasoning effort** is a latency and cost dial, not a prose dial. `none`/`low` for lookups and greetings, `medium` as the default, `high`/`xhigh` for multi-step reasoning and tool orchestration. Raising it everywhere is an easy way to make a fast product slow.
+
+> [!NOTE]
+> **Reasoning effort does not buy accuracy**
+>
+> It buys the model room to think. On a lookup it adds latency and cost without changing the answer, which is why `medium` is the default.
 
 Switching models never touches the prompt, knowledge base, or tools. Analytics are tracked per agent, so history stays continuous.
 
@@ -91,6 +98,11 @@ So a **failed call is a failed answer** — the model receives the error and tel
 
 **The model does not support tools.** `mixtral-8x7b-32768` and OpenRouter's `o1` and `deepseek-r1` cannot call tools. An agent with tools on one of those looks correctly configured and does nothing. Check this first.
 
+> [!CAUTION]
+> **Tools are silently ignored on unsupported models**
+>
+> There is no error at configuration time. The agent saves, the test passes against the prompt, and the tool just never fires.
+
 Second most common: the system prompt never mentions the capability, so the agent answers from training data instead of reaching for the tool.
 
 ## Welcome messages
@@ -104,6 +116,11 @@ A good one names what the agent does, sets scope, and invites a concrete first m
 Compare with "Hi! 👋 How can I assist?" — nothing about scope, nothing about what is possible. The visitor has to guess, and most close the tab.
 
 Keep it to about three lines. Longer and it pushes the input out of view on mobile, which is most widget traffic. Set it on the agent, not the widget, so every channel greets people the same way.
+
+> [!TIP]
+> **Name the scope, then invite a first message**
+>
+> "Invoices, refunds, and plan changes — what do you need?" beats "Hi! How can I assist?" every time, because the second one makes the visitor guess.
 
 ## Testing in the playground
 

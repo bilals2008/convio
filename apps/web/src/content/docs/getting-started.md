@@ -32,6 +32,8 @@ You can belong to several organizations and switch between them from the sidebar
 
 **Settings** — organization, team members, provider keys, billing, and audit logs.
 
+![The Convio dashboard, with the organization switcher at the top of the sidebar and quick stats for conversations, agents, and token spend](https://placehold.co/1280x720)
+
 ## Your first agent
 
 1. **Agents → New.** Name it, pick a model, write a system prompt. Everything else can come later.
@@ -61,6 +63,11 @@ Removing a member revokes their access immediately, but what they built stays. R
 ## Ownership
 
 The owner controls the three irreversible things: deleting the organization, wiping its data, and transferring ownership. Transfer via **Settings → Organization**; the previous owner is demoted to admin, not removed.
+
+> [!WARNING]
+> **Transfer ownership before the owner leaves**
+>
+> A transfer needs the current owner's session. Once they are gone the organization is stuck — nobody can delete it or wipe its data.
 
 **If the owner leaves the company, transfer before they go.** A transfer needs the current owner's session, so once they are gone the organization is stuck. This is the most common way organizations get stranded.
 
