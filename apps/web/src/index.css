@@ -24,15 +24,35 @@
 @import "@fontsource/dm-serif-display";
 
 /* shadcn/typeset preset — docs reading surface.
-   Imported after ./styles/typeset.css (above); @import must stay at the top of the file. */
+   Imported after ./styles/typeset.css (above); @import must stay at the top of the file.
+   One text family for prose and headings, the way Vercel/Mintlify docs read: Inter for
+   body, weight and tracking carry the hierarchy, not a second typeface. */
 @layer components {
   .typeset-docs {
-    --typeset-font-body: var(--font-oxanium);
-    --typeset-font-heading: var(--font-manrope);
-    --typeset-font-mono: var(--font-geist-mono);
-    --typeset-size: 14px;
-    --typeset-leading: 1.6;
+    --typeset-font-body: var(--font-sans);
+    --typeset-font-heading: var(--font-sans);
+    --typeset-font-mono: var(--font-mono);
+    --typeset-size: 15px;
+    --typeset-leading: 1.7;
     --typeset-flow: 1.25em;
+  }
+
+  /* The sticky docs topbar is 3.5rem tall, so an anchor jump must clear it.
+     Higher specificity than `.typeset :where([id])` on purpose. */
+  .typeset.typeset-docs :is(h1, h2, h3, h4)[id] {
+    scroll-margin-block-start: 5rem;
+  }
+}
+
+/* Anchor links and the TOC both navigate by hash, so let the browser ease to them.
+   Scoped with :has() so the landing page's Lenis scrolling is untouched. */
+:has(.docs-shell) {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :has(.docs-shell) {
+    scroll-behavior: auto;
   }
 }
 
@@ -92,6 +112,7 @@
     --color-success: var(--success);
     --color-warning: var(--warning);
     --color-info: var(--info);
+    --color-tip: var(--tip);
     --animate-typing-dot: typing-dot 1.4s ease-in-out infinite;
     --animate-widget-enter: widget-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     --animate-widget-exit: widget-exit 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -125,6 +146,7 @@
     --success: hsl(142 71% 42%);
     --warning: hsl(38 92% 48%);
     --info: hsl(217 91% 55%);
+    --tip: hsl(262 72% 52%);
     --sidebar: hsl(142 30% 97%);
     --sidebar-foreground: hsl(142 30% 18%);
     --sidebar-primary: hsl(142 71% 28%);
@@ -162,6 +184,7 @@
     --success: hsl(142 71% 45%);
     --warning: hsl(38 92% 50%);
     --info: hsl(217 91% 60%);
+    --tip: hsl(262 80% 68%);
     --sidebar: hsl(195 54% 3%);
     --sidebar-foreground: hsl(195 8% 55%);
     --sidebar-primary: hsl(136 76% 45%);
