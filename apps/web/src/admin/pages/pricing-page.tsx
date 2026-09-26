@@ -161,6 +161,8 @@ export default function AdminPricingPage() {
       await adminApi.deletePlan(pendingDelete.id)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'plans'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'creem'] })
+      // The public pricing pages render these same plan rows.
+      await queryClient.invalidateQueries({ queryKey: ['pricing', 'plans'] })
       toast.success(`${pendingDelete.name} plan deleted`)
       setPendingDelete(null)
     } catch (error) {

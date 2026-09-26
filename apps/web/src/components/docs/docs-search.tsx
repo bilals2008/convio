@@ -20,9 +20,8 @@ const KBD =
   'flex h-5 min-w-5 items-center justify-center rounded border border-border bg-background px-1.5 font-mono text-[10px] leading-none whitespace-nowrap'
 
 /**
- * Shared by the topbar trigger and the sidebar trigger — one source for the platform
- * check and the key styling, so the two never disagree about what ⌘K looks like. One
- * chip, not two: two chips are wider than the docs rail and force a horizontal scroll.
+ * One source for the platform check and the key styling, so the chip never disagrees
+ * with the shortcut it advertises.
  */
 export function DocsShortcut({ className }: { className?: string }) {
   return (
@@ -33,8 +32,8 @@ export function DocsShortcut({ className }: { className?: string }) {
 }
 
 /**
- * Open state is owned by the shell, not here: the sidebar renders a second trigger and
- * ⌘K has to work from either rail, and two owners of one dialog can only fight.
+ * Open state is owned by the shell, not here: ⌘K has to work from anywhere on the page,
+ * and two owners of one dialog can only fight.
  */
 export function DocsSearch({
   open,

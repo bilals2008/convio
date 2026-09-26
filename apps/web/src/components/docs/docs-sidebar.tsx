@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowUpRight, LifeBuoy, Search } from 'lucide-react'
-import { DocsShortcut } from '@/components/docs/docs-search'
-import { buttonVariants } from '@/components/ui/button'
+import { ChevronRight } from 'lucide-react'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
 import { docSections, type DocPage, type DocSection } from '@/lib/docs/nav'
 import { prefetchDoc } from '@/lib/docs/content'
@@ -16,25 +15,16 @@ function isActive(pathname: string, slug: string): boolean {
   return current === (slug ? `/docs/${slug}` : '/docs')
 }
 
-/** Walks the subtree so a nested page still lights up its section header. */
-function containsActive(pages: DocPage[], pathname: string): boolean {
-  return pages.some(
-    (page) =>
-      isActive(pathname, page.slug) ||
-      (page.children ? containsActive(page.children, pathname) : false),
-  )
-}
-
 const BADGE_STYLES = {
   new: 'bg-primary/10 text-primary',
   popular: 'bg-secondary text-secondary-foreground',
 } as const
 
 const ITEM_BASE =
-  'group relative flex items-center gap-2.5 rounded-md py-1.5 pl-3 pr-2.5 text-[13px] leading-5 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring/60'
+  'group relative flex items-center gap-2.5 rounded-md py-1.5 pl-2.5 pr-2 text-[13.5px] leading-5 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring/60'
 
-const ITEM_IDLE = 'text-muted-foreground hover:bg-accent/70 hover:text-foreground'
-const ITEM_ACTIVE = 'bg-primary/10 font-medium text-foreground'
+const ITEM_IDLE = 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+const ITEM_ACTIVE = 'bg-accent font-medium text-foreground'
 
 function NavItem({
   page,
@@ -73,7 +63,7 @@ function NavItem({
             aria-hidden="true"
             className={cn(
               'size-4 shrink-0 transition-colors duration-150',
-              active ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/80',
+              active ? 'text-primary' : 'text-muted-foreground/80 group-hover:text-foreground',
             )}
           />
         )}
@@ -117,30 +107,42 @@ function NavSection({
   pathname: string
   onNavigate?: () => void
 }) {
-  const [collapsed, setCollapsed] = useState(false)
-  // Collapsing is for the sections the reader is not in — hiding the open page would
-  // strand them with no highlight in the rail.
-  const open = !collapsed || containsActive(section.pages, pathname)
-  const panelId = `docs-nav-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+  // All sections start expanded and toggle freely. The earlier version refused to
+  // collapse the section holding the active page, which read as a broken accordion.
+  const [open, setOpen] = useState(true)
 
   return (
-    <div>
-      {/* No chevron: the label itself is the control, and a caret on every group is
-          noise in a rail this narrow. aria-expanded still carries the state to AT. */}
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setCollapsed((value) => !value)}
-        className="mb-2 flex w-full items-center rounded-sm py-1 pr-2 pl-3 text-left text-foreground/75 transition-colors outline-none hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="group/section"
+    >
+      <CollapsibleTrigger
+        className={cn(
+          // pl matches ITEM_BASE so the label lines up with the item text below it.
+          'flex w-full items-center gap-2 rounded-md py-1.5 pr-2 pl-2.5 text-left outline-none',
+          'text-muted-foreground transition-colors duration-150 hover:text-foreground',
+          'focus-visible:ring-2 focus-visible:ring-ring/60',
+          // Base UI puts data-open/data-closed on the root (data-panel-open is only on
+          // the trigger itself), so the group selector must key off [open].
+          'group-data-[open]/section:text-foreground',
+        )}
       >
-        <span className="text-[11px] font-bold tracking-[0.08em] uppercase">
+        <span className="font-heading text-[13px] font-bold tracking-[0.01em] text-foreground">
           {section.title}
         </span>
-      </button>
+        {/* The caret belongs at the end of the row — leading with it makes the label
+            look like a tree node instead of a section heading. */}
+        <ChevronRight
+          aria-hidden="true"
+          className="ml-auto size-[15px] shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-data-[open]/section:rotate-90"
+        />
+      </CollapsibleTrigger>
 
-      {open && (
-        <ul id={panelId} className="flex flex-col gap-0.5">
+      {/* grid-template-rows animates 0fr → 1fr, so the panel collapses to its own height
+          without a measured pixel value. */}
+      <CollapsibleContent className="grid grid-rows-[1fr] transition-[grid-template-rows] duration-200 ease-out data-[ending-style]:grid-rows-[0fr] data-[starting-style]:grid-rows-[0fr]">
+        <ul className="mt-1 flex flex-col gap-0.5 overflow-hidden">
           {section.pages.map((page) => (
             <NavItem
               key={page.slug}
@@ -151,38 +153,18 @@ function NavSection({
             />
           ))}
         </ul>
-      )}
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
-/**
- * `min-h-full` + `mt-auto` pins the help card to the bottom of whatever box the nav
- * sits in — the sticky rail on desktop, the full-height sheet on mobile — from one
- * layout instead of a viewport-dependent duplicate.
- */
-export function DocsSidebar({
-  onNavigate,
-  onOpenSearch,
-}: {
-  onNavigate?: () => void
-  onOpenSearch: () => void
-}) {
+/** The nav is the only zone left, so the whole rail scrolls. */
+export function DocsSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { pathname } = useLocation()
 
   return (
-    <nav aria-label="Documentation" className="flex min-h-full flex-col px-3 pt-6 pb-8">
-      <button
-        type="button"
-        onClick={onOpenSearch}
-        className="flex w-full items-center gap-2 rounded-lg bg-muted/60 px-2.5 py-2 text-left text-[13px] text-muted-foreground transition-colors duration-150 outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
-      >
-        <Search className="size-4 shrink-0 opacity-70" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate">Search docs</span>
-        <DocsShortcut />
-      </button>
-
-      <div className="mt-7 flex flex-col gap-6">
+    <nav aria-label="Documentation" className="h-full overflow-y-auto px-3 py-5">
+      <div className="flex flex-col gap-6">
         {docSections.map((section) => (
           <NavSection
             key={section.title}
@@ -191,29 +173,6 @@ export function DocsSidebar({
             onNavigate={onNavigate}
           />
         ))}
-      </div>
-
-      <div className="mt-auto rounded-lg bg-muted/50 p-3.5">
-        <div className="flex items-center gap-2">
-          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <LifeBuoy className="size-3.5" aria-hidden="true" />
-          </span>
-          <p className="text-[13px] leading-none font-medium">Need a hand?</p>
-        </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Migrating an existing agent, or need a plan that fits your volume?
-        </p>
-        <Link
-          to="/contact"
-          onClick={onNavigate}
-          className={cn(
-            buttonVariants({ variant: 'outline', size: 'sm' }),
-            'mt-3 w-full justify-between',
-          )}
-        >
-          Talk to our team
-          <ArrowUpRight className="size-3.5" aria-hidden="true" />
-        </Link>
       </div>
     </nav>
   )

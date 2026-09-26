@@ -28,7 +28,9 @@ export function DocsTopbar({
   const { isAuthenticated, isLoading } = useAuth()
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-[85rem] items-center gap-3 px-4 sm:gap-4 sm:px-6">
+      {/* Full-bleed rather than a centred track: the sidebar rail under it is flush with
+          the viewport edge, so the logo has to be too or the two left edges disagree. */}
+      <div className="flex h-16 w-full items-center gap-3 px-4 sm:gap-4 sm:px-6">
         <Button
           variant="ghost"
           size="icon"

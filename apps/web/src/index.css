@@ -17,8 +17,32 @@
     --typeset-font-heading: var(--font-sans);
     --typeset-font-mono: var(--font-mono);
     --typeset-size: 15px;
-    --typeset-leading: 1.7;
-    --typeset-flow: 1.25em;
+    --typeset-leading: 1.65;
+    --typeset-flow: 1.15em;
+  }
+
+  /* Hierarchy: with a single family, headings must earn separation from size, weight
+     and colour — muted body + full-strength bold headings, like Mintlify dark docs. */
+  .typeset.typeset-docs :where(p, li) {
+    color: var(--color-muted-foreground);
+  }
+  .typeset.typeset-docs :where(strong) {
+    color: var(--color-foreground);
+  }
+  .typeset.typeset-docs :where(h1) {
+    font-size: 1.9em;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .typeset.typeset-docs :where(h2) {
+    font-size: 1.4em;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-block-start: calc(var(--typeset-flow) * 1.9);
+  }
+  .typeset.typeset-docs :where(h3) {
+    font-size: 1.15em;
+    font-weight: 650;
   }
 
   /* The sticky docs topbar is 4rem tall, so an anchor jump must clear it.
