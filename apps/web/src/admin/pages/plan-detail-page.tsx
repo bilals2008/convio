@@ -22,13 +22,12 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
@@ -185,6 +184,13 @@ function reportCreemSync(results: CreemSyncResult[]) {
   }
 }
 
+const CREEM_CHIP_VARIANT = {
+  notLinked: 'inactive',
+  notFound: 'failed',
+  mismatch: 'pending',
+  verified: 'active',
+} as const
+
 function CreemPeriodRow({
   label,
   status,
@@ -206,41 +212,42 @@ function CreemPeriodRow({
   const hasMismatch = status.found && status.mismatches.length > 0
 
   const chip = !hasId
-    ? { text: 'Not linked', className: 'bg-muted text-muted-foreground' }
+    ? CREEM_CHIP_VARIANT.notLinked
     : !status.found
-      ? { text: 'Not found', className: 'bg-destructive/10 text-destructive' }
+      ? CREEM_CHIP_VARIANT.notFound
       : hasMismatch
-        ? { text: 'Mismatch', className: 'bg-amber-500/10 text-amber-600' }
-        : { text: 'Verified', className: 'bg-emerald-500/10 text-emerald-600' }
+        ? CREEM_CHIP_VARIANT.mismatch
+        : CREEM_CHIP_VARIANT.verified
+  const chipText = !hasId ? 'Not linked' : !status.found ? 'Not found' : hasMismatch ? 'Mismatch' : 'Verified'
 
   return (
-    <div className="rounded-lg border border-border/60 p-3">
-      <div className="flex items-start justify-between gap-3">
+    <div className="rounded-lg border border-border/60 p-2.5">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium">{label}</span>
-            <Badge variant="secondary" className={cn('shrink-0', chip.className)}>{chip.text}</Badge>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium">{label}</span>
+            <Badge variant={chip} className="shrink-0">{chipText}</Badge>
             {status.source === 'env' && <span className="text-[11px] text-muted-foreground">from .env</span>}
           </div>
           <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
             {status.productId ?? 'No Creem product linked'}
           </p>
         </div>
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatCents(status.amountCents)}</span>
+        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{formatCents(status.amountCents)}</span>
       </div>
 
       {status.product && (
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-          <span>Creem: {status.product.name}</span>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-muted-foreground">
+          <span className="truncate">{status.product.name}</span>
           <span className={cn(status.product.status !== 'active' && 'text-destructive')}>{status.product.status}</span>
           <span>{status.product.trialPeriodDays ? `${status.product.trialPeriodDays}d trial` : 'no trial'}</span>
         </div>
       )}
 
       {status.mismatches.length > 0 && (
-        <ul className="mt-2 space-y-1">
+        <ul className="mt-1.5 space-y-0.5">
           {status.mismatches.map((m) => (
-            <li key={m} className="flex items-start gap-1.5 text-[11px] text-amber-600">
+            <li key={m} className="flex items-start gap-1.5 text-[11px] text-warning">
               <AlertTriangle className="mt-0.5 size-3 shrink-0" />
               <span>{m}</span>
             </li>
@@ -248,21 +255,21 @@ function CreemPeriodRow({
         </ul>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
         {!hasId ? (
-          <Button type="button" variant="outline" size="sm" onClick={onCreate} disabled={busy || actionsDisabled}>
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Plug className="size-3.5" />}
+          <Button type="button" variant="outline" size="xs" onClick={onCreate} disabled={busy || actionsDisabled}>
+            {busy ? <Loader2 className="size-3 animate-spin" /> : <Plug className="size-3" />}
             Create in Creem
           </Button>
         ) : (
           <>
-            <Button type="button" variant="outline" size="sm" onClick={onSync} disabled={busy || actionsDisabled || !status.found}>
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+            <Button type="button" variant="outline" size="xs" onClick={onSync} disabled={busy || actionsDisabled || !status.found}>
+              {busy ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
               Sync to Creem
             </Button>
             {status.source === 'env' && (
-              <Button type="button" variant="outline" size="sm" onClick={onLink} disabled={busy || actionsDisabled || !status.found}>
-                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
+              <Button type="button" variant="outline" size="xs" onClick={onLink} disabled={busy || actionsDisabled || !status.found}>
+                {busy ? <Loader2 className="size-3 animate-spin" /> : <Link2 className="size-3" />}
                 Save to plan
               </Button>
             )}
@@ -305,7 +312,7 @@ export default function AdminPlanDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'creem'] })
       // The public pricing pages render these same plan rows.
       queryClient.invalidateQueries({ queryKey: ['pricing', 'plans'] })
-      if (isEdit && 'creemSync' in result.data) reportCreemSync(result.data.creemSync)
+      if (isEdit && 'creemSync' in result.data) reportCreemSync(result.data.creemSync as CreemSyncResult[])
       else toast.success('Plan created')
       navigate('/admin/pricing')
     },
@@ -406,16 +413,16 @@ export default function AdminPlanDetailPage() {
 
   if (isEdit && isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-8 w-24" />
         </div>
-        <div className="grid gap-6 lg:grid-cols-5">
-          <div className="space-y-6 lg:col-span-3">
-            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 w-full" />)}
+        <div className="grid gap-5 lg:grid-cols-5">
+          <div className="space-y-5 lg:col-span-3">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
           </div>
-          <div className="space-y-6 lg:col-span-2">
+          <div className="space-y-5 lg:col-span-2">
             {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
           </div>
         </div>
@@ -436,91 +443,87 @@ export default function AdminPlanDetailPage() {
   const periods = creemStatus.data?.periods ?? []
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={() => navigate('/admin/pricing')}
-          disabled={saving}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-        >
-          <ArrowLeft className="size-3.5" />
-          Pricing
-        </button>
+        <div className="flex min-w-0 items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => navigate('/admin/pricing')}
+            disabled={saving}
+            aria-label="Back to pricing"
+          >
+            <ArrowLeft className="size-3.5" />
+          </Button>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold tracking-tight">{isEdit ? plan!.name : 'New plan'}</h1>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => navigate('/admin/pricing')} disabled={saving}>
             Cancel
           </Button>
           <Button size="sm" onClick={handleSubmit} disabled={saving || (isEdit && !formDirty)}>
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <ListChecks className="size-3.5" />}
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <ListChecks data-icon="inline-start" />}
             {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create plan'}
           </Button>
         </div>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{isEdit ? plan!.name : 'New plan'}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {isEdit ? 'Edit pricing, features, limits, and visibility. Changes apply immediately.' : 'Add a new plan. Changes apply immediately after saving.'}
-        </p>
-      </div>
-
       {mode && (
         <div
           className={cn(
-            'flex items-center gap-3 rounded-lg border p-3',
-            mode === 'test' ? 'border-amber-500/30 bg-amber-500/5' : 'border-destructive/30 bg-destructive/5',
+            'flex items-center gap-2.5 rounded-lg border px-3 py-2',
+            mode === 'test' ? 'border-warning/30 bg-warning/5' : 'border-destructive/30 bg-destructive/5',
           )}
         >
-          <Plug className={cn('size-4 shrink-0', mode === 'test' ? 'text-amber-600' : 'text-destructive')} />
-          <div className="min-w-0 text-xs">
-            <p className="font-medium text-foreground">
-              {mode === 'test' ? 'Creem is in TEST mode' : 'Creem is in LIVE mode'}
-            </p>
-            <p className="text-muted-foreground">
+          <Plug className={cn('size-3.5 shrink-0', mode === 'test' ? 'text-warning' : 'text-destructive')} />
+          <p className="min-w-0 truncate text-xs">
+            <span className="font-medium text-foreground">
+              {mode === 'test' ? 'Creem is in TEST mode' : 'Creem is in LIVE mode'}.
+            </span>{' '}
+            <span className="text-muted-foreground">
               {mode === 'test'
-                ? 'No real payments. Product IDs here only work in TEST.'
+                ? 'No real payments — product IDs only work in TEST.'
                 : 'Changes affect real customers and payments.'}
-            </p>
-          </div>
+            </span>
+          </p>
         </div>
       )}
 
-      <Separator />
-
-      <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-5">
-        <div className="space-y-6 lg:col-span-3">
-          <CardSection icon={Tag} title="General" description="Identity and short description.">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Key" required error={form.formState.errors.key?.message} hint="Unique id used by billing, e.g. pro">
-                <Input className="h-9 font-mono" placeholder="pro" disabled={!!plan} {...form.register('key')} />
+      <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-5">
+        <div className="space-y-5 lg:col-span-3">
+          <CardSection icon={Tag} title="General">
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <FormField label="Key" required error={form.formState.errors.key?.message} hint="Unique billing id, e.g. pro">
+                <Input className="h-8 font-mono" placeholder="pro" disabled={!!plan} {...form.register('key')} />
               </FormField>
               <FormField label="Name" required error={form.formState.errors.name?.message}>
-                <Input className="h-9" placeholder="Pro" {...form.register('name')} />
+                <Input className="h-8" placeholder="Pro" {...form.register('name')} />
               </FormField>
             </div>
-            <FormField label="Description" className="mt-4">
-              <Input className="h-9" placeholder="For growing businesses" {...form.register('description')} />
+            <FormField label="Description" className="mt-3.5">
+              <Input className="h-8" placeholder="For growing businesses" {...form.register('description')} />
             </FormField>
           </CardSection>
 
-          <CardSection icon={CreditCard} title="Pricing" description="The amount charged per period. The yearly total and the price on the card are calculated from these.">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Monthly amount ($)" error={form.formState.errors.priceMonthly?.message} hint="Charged each month. Leave blank for a custom-priced plan.">
-                <Input className="h-9" type="number" min="0" step="0.01" placeholder="39" {...form.register('priceMonthly')} />
+          <CardSection icon={CreditCard} title="Pricing" description="Yearly total is calculated from the monthly amount and discount.">
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <FormField label="Monthly amount ($)" error={form.formState.errors.priceMonthly?.message} hint="Blank = custom-priced plan">
+                <Input className="h-8" type="number" min="0" step="0.01" placeholder="39" {...form.register('priceMonthly')} />
               </FormField>
-              <FormField label="Yearly discount %" error={form.formState.errors.yearlyDiscountPercent?.message} hint="Off the yearly total. 0 = no discount.">
-                <Input className="h-9" type="number" min="0" max="99" step="1" {...form.register('yearlyDiscountPercent')} />
+              <FormField label="Yearly discount %" error={form.formState.errors.yearlyDiscountPercent?.message} hint="0 = no discount">
+                <Input className="h-8" type="number" min="0" max="99" step="1" {...form.register('yearlyDiscountPercent')} />
               </FormField>
               <FormField label="Period">
-                <Input className="h-9" placeholder="/month" {...form.register('period')} />
+                <Input className="h-8" placeholder="/month" {...form.register('period')} />
               </FormField>
               <FormField
                 label="Yearly amount ($)"
-                hint={derivedYearly ? `Calculated — ${derivedYearly.label}/month when billed yearly` : 'Set a monthly amount to calculate this'}
+                hint={derivedYearly ? `${derivedYearly.label}/mo when billed yearly` : 'Set a monthly amount'}
               >
                 <Input
-                  className="h-9 bg-muted/40 tabular-nums"
+                  className="h-8 bg-muted/40 tabular-nums"
                   readOnly
                   tabIndex={-1}
                   value={derivedYearly?.total ?? ''}
@@ -530,20 +533,20 @@ export default function AdminPlanDetailPage() {
               <FormField
                 label="Trial days"
                 error={form.formState.errors.trialPeriodDays?.message}
-                hint="Free trial at checkout, handled by Creem. Blank = no trial."
+                hint="Blank = no trial"
               >
-                <Input className="h-9" type="number" min="1" max="365" placeholder="No trial" {...form.register('trialPeriodDays')} />
+                <Input className="h-8" type="number" min="1" max="365" placeholder="No trial" {...form.register('trialPeriodDays')} />
               </FormField>
             </div>
           </CardSection>
 
-          <CardSection icon={Palette} title="Appearance" description="Badge, icon, button, and ordering on the pricing page.">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <CardSection icon={Palette} title="Appearance">
+            <div className="grid gap-3.5 sm:grid-cols-2">
               <FormField label="Badge">
-                <Input className="h-9" placeholder="Most Popular" {...form.register('badge')} />
+                <Input className="h-8" placeholder="Most Popular" {...form.register('badge')} />
               </FormField>
               <FormField label="Icon">
-                <NativeSelect className="w-full" {...form.register('icon')}>
+                <NativeSelect className="h-8 w-full" {...form.register('icon')}>
                   <option value="">None</option>
                   <option value="zap">Zap</option>
                   <option value="star">Star</option>
@@ -552,65 +555,60 @@ export default function AdminPlanDetailPage() {
                 </NativeSelect>
               </FormField>
               <FormField label="CTA button">
-                <Input className="h-9" placeholder="Get started" {...form.register('cta')} />
+                <Input className="h-8" placeholder="Get started" {...form.register('cta')} />
               </FormField>
               <FormField label="Href">
-                <Input className="h-9" placeholder="/signup" {...form.register('href')} />
+                <Input className="h-8" placeholder="/signup" {...form.register('href')} />
               </FormField>
               <FormField label="Button variant">
-                <NativeSelect className="w-full" {...form.register('variant')}>
+                <NativeSelect className="h-8 w-full" {...form.register('variant')}>
                   <option value="outline">Outline</option>
                   <option value="default">Default</option>
                 </NativeSelect>
               </FormField>
               <FormField label="Icon color (tailwind)">
-                <Input className="h-9" placeholder="text-primary" {...form.register('iconColor')} />
+                <Input className="h-8" placeholder="text-primary" {...form.register('iconColor')} />
+              </FormField>
+              <FormField label="Sort order" error={form.formState.errors.sortOrder?.message} className="sm:max-w-[140px]">
+                <Input className="h-8" type="number" min="0" step="1" {...form.register('sortOrder')} />
               </FormField>
             </div>
-            <FormField label="Sort order" error={form.formState.errors.sortOrder?.message} className="mt-4 sm:max-w-[140px]">
-              <Input className="h-9" type="number" min="0" step="1" {...form.register('sortOrder')} />
-            </FormField>
           </CardSection>
 
-          <CardSection icon={ListChecks} title="Features & limits" description="Feature bullets (one per line). Blank limit means unlimited.">
+          <CardSection icon={ListChecks} title="Features & limits" description="One feature per line. Blank limit = unlimited.">
             <FormField label="Features (one per line)">
-              <Textarea rows={8} className="font-mono text-xs" placeholder={'10 AI agents\n25,000 messages/mo\nAll channels'} {...form.register('featuresText')} />
+              <Textarea rows={7} className="font-mono text-xs" placeholder={'10 AI agents\n25,000 messages/mo\nAll channels'} {...form.register('featuresText')} />
             </FormField>
-            <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="mt-3.5 grid grid-cols-2 gap-3.5 sm:grid-cols-4">
               <FormField label="Agents" error={form.formState.errors.agents?.message}>
-                <Input className="h-9" type="number" min="0" step="1" placeholder="∞" {...form.register('agents')} />
+                <Input className="h-8" type="number" min="0" step="1" placeholder="∞" {...form.register('agents')} />
               </FormField>
               <FormField label="Messages / mo" error={form.formState.errors.messagesPerMonth?.message}>
-                <Input className="h-9" type="number" min="0" step="1" placeholder="∞" {...form.register('messagesPerMonth')} />
+                <Input className="h-8" type="number" min="0" step="1" placeholder="∞" {...form.register('messagesPerMonth')} />
               </FormField>
               <FormField label="Knowledge bases" error={form.formState.errors.knowledgeBases?.message}>
-                <Input className="h-9" type="number" min="0" step="1" placeholder="∞" {...form.register('knowledgeBases')} />
+                <Input className="h-8" type="number" min="0" step="1" placeholder="∞" {...form.register('knowledgeBases')} />
               </FormField>
               <FormField label="Organizations" error={form.formState.errors.organizations?.message}>
-                <Input className="h-9" type="number" min="0" step="1" placeholder="∞" {...form.register('organizations')} />
+                <Input className="h-8" type="number" min="0" step="1" placeholder="∞" {...form.register('organizations')} />
               </FormField>
             </div>
           </CardSection>
 
           {isEdit && (
             <Card className="border-destructive/30">
-              <CardHeader className="flex flex-row items-center gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
-                  <AlertTriangle className="size-4.5" />
-                </div>
-                <div>
+              <CardContent className="flex items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
                   <CardTitle>Danger zone</CardTitle>
-                  <CardDescription>Deleting a plan does not change organizations already on it.</CardDescription>
+                  <CardDescription className="mt-0.5">Organizations already on this plan keep their access.</CardDescription>
                 </div>
-              </CardHeader>
-              <CardContent>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setConfirmDeleteOpen(true)}
                   disabled={saving || deleteMutation.isPending}
-                  className="text-destructive hover:text-destructive"
+                  className="shrink-0 text-destructive hover:text-destructive"
                 >
                   {deleteMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                   Delete plan
@@ -620,53 +618,47 @@ export default function AdminPlanDetailPage() {
           )}
         </div>
 
-        <div className="space-y-6 lg:col-span-2">
-          <div className="lg:sticky lg:top-6 lg:space-y-6">
-            <CardSection icon={Eye} title="Visibility" description="Where the plan shows up.">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <Label className="text-xs font-medium">Highlighted</Label>
-                    <p className="text-xs text-muted-foreground">Standout card on the pricing page.</p>
+        <div className="space-y-5 lg:col-span-2">
+          <div className="lg:sticky lg:top-5 lg:space-y-5">
+            <CardSection icon={Eye} title="Visibility">
+              <div className="space-y-3">
+                {([
+                  { name: 'highlighted' as const, watched: isHighlighted, label: 'Highlighted', hint: 'Standout card on the pricing page.' },
+                  { name: 'comingSoon' as const, watched: isComingSoon, label: 'Coming soon', hint: 'Shown but not purchasable yet.' },
+                  { name: 'active' as const, watched: isActive, label: 'Active', hint: 'Visible on the public pricing page.' },
+                ]).map(({ name, watched, label, hint }) => (
+                  <div key={name} className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <Label className="text-xs font-medium">{label}</Label>
+                      <p className="text-[11px] text-muted-foreground">{hint}</p>
+                    </div>
+                    <Switch
+                      checked={watched}
+                      onCheckedChange={(c) => form.setValue(name, c, { shouldDirty: true })}
+                      disabled={saving}
+                    />
                   </div>
-                  <Switch checked={isHighlighted} onCheckedChange={(c) => form.setValue('highlighted', c, { shouldDirty: true })} disabled={saving} />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <Label className="text-xs font-medium">Coming soon</Label>
-                    <p className="text-xs text-muted-foreground">Shown but not purchasable yet.</p>
-                  </div>
-                  <Switch checked={isComingSoon} onCheckedChange={(c) => form.setValue('comingSoon', c, { shouldDirty: true })} disabled={saving} />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <Label className="text-xs font-medium">Active</Label>
-                    <p className="text-xs text-muted-foreground">Visible on the public pricing page.</p>
-                  </div>
-                  <Switch checked={isActive} onCheckedChange={(c) => form.setValue('active', c, { shouldDirty: true })} disabled={saving} />
-                </div>
+                ))}
               </div>
             </CardSection>
 
-            <CardSection icon={Plug} title="Creem" description="Products that power checkout and webhook mapping. Saving a plan syncs linked products automatically.">
+            <CardSection icon={Plug} title="Creem" description="Checkout products. Saving syncs linked products automatically.">
               {!isEdit || !plan ? (
                 <p className="text-xs text-muted-foreground">
                   Save the plan first — Creem products are linked to a saved plan.
                 </p>
               ) : formDirty ? (
-                <p className="flex items-start gap-2 text-xs text-amber-600">
+                <p className="flex items-start gap-1.5 text-xs text-warning">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                   Save your changes first, then create, sync, or link Creem products.
                 </p>
               ) : creemStatus.isLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
+                <div className="space-y-2.5">
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {periods.map((p) => (
                     <CreemPeriodRow
                       key={p.period}
@@ -685,7 +677,7 @@ export default function AdminPlanDetailPage() {
                   <button
                     type="button"
                     onClick={() => creemStatus.refetch()}
-                    className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
                   >
                     <RefreshCw className="size-3" />
                     Re-check
@@ -694,30 +686,28 @@ export default function AdminPlanDetailPage() {
               )}
             </CardSection>
 
-            <CardSection icon={BadgeCheck} title="Preview" description="How this plan appears on the pricing page.">
-              <div className={cn('rounded-xl border p-4', isHighlighted ? 'border-primary/40' : 'border-border/60')}>
+            <CardSection icon={BadgeCheck} title="Preview">
+              <div className={cn('rounded-xl border p-3.5', isHighlighted ? 'border-primary/40' : 'border-border/60')}>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">{previewName || 'Plan name'}</p>
-                  {previewBadge && (
-                    <Badge variant="secondary" className="border border-primary/20 bg-primary/15 text-primary">{previewBadge}</Badge>
+                  <p className="truncate text-sm font-medium">{previewName || 'Plan name'}</p>
+                  {previewBadge && <Badge variant="pro">{previewBadge}</Badge>}
+                </div>
+                <div className="mt-1.5 flex items-baseline gap-1">
+                  <span className="text-xl font-semibold tabular-nums">{previewPrice}</span>
+                  {derivedYearly && (
+                    <span className="text-[11px] text-muted-foreground tabular-nums">
+                      / {formatMoney(derivedYearly.total)} yearly
+                    </span>
                   )}
                 </div>
-                <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-2xl font-semibold tabular-nums">{previewPrice}</span>
-                </div>
-                {derivedYearly && (
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    Yearly: {formatMoney(derivedYearly.total)} ({derivedYearly.label}/mo)
-                  </p>
-                )}
                 {trialDays && (
-                  <p className="mt-2 flex items-center gap-1.5 text-[11px] text-emerald-600">
+                  <p className="mt-1.5 flex items-center gap-1 text-[11px] text-success">
                     <Check className="size-3" />
-                    {trialDays}-day free trial at checkout
+                    {trialDays}-day free trial
                   </p>
                 )}
-                {isComingSoon && <p className="mt-2 text-[11px] text-muted-foreground">Shown as coming soon</p>}
-                {!isActive && <p className="mt-2 text-[11px] text-muted-foreground">Hidden from the pricing page</p>}
+                {isComingSoon && <p className="mt-1.5 text-[11px] text-muted-foreground">Shown as coming soon</p>}
+                {!isActive && <p className="mt-1.5 text-[11px] text-muted-foreground">Hidden from the pricing page</p>}
               </div>
             </CardSection>
           </div>
