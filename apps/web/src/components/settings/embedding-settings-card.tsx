@@ -30,10 +30,6 @@ const LOCAL_MODELS = [
   { value: 'multilingual-e5', label: 'Multilingual E5', description: 'Urdu, Hindi, Arabic, Chinese + English' },
 ] as const
 
-const MODEL_LABEL: Record<string, string> = Object.fromEntries(
-  LOCAL_MODELS.map((m) => [m.value, m.label]),
-)
-
 interface EmbeddingOrg {
   embeddingProvider?: string | null
   embeddingModel?: string | null
@@ -170,9 +166,6 @@ export function EmbeddingSettingsCard() {
                 </ComboboxList>
               </ComboboxContent>
             </Combobox>
-            <p className="text-xs text-muted-foreground">
-              Currently: {MODEL_LABEL[model || 'all-minilm'] ?? model || 'MiniLM'}
-            </p>
           </div>
         )}
 
