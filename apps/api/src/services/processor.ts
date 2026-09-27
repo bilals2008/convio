@@ -132,7 +132,12 @@ export async function resolveEmbeddingConfig(organizationId?: string): Promise<E
     select: { embeddingProvider: true, embeddingModel: true },
   })
 
-  if (org?.embeddingProvider !== 'openai') return { providerId: 'local' }
+  if (org?.embeddingProvider !== 'openai') {
+    // Local models (all-minilm | bge-small | multilingual-e5) are also an
+    // org-level choice — dropping the model here meant every local org
+    // silently indexed with the default regardless of the setting.
+    return { providerId: 'local', model: org?.embeddingModel ?? undefined }
+  }
 
   const key = await prisma.providerKey.findUnique({
     where: { organizationId_provider: { organizationId, provider: 'openai' } },

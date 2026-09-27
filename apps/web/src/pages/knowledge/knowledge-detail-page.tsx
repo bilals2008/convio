@@ -709,10 +709,18 @@ export default function KnowledgeDetailPage() {
               {typeof viewDoc?.chunkCount === 'number'
                 ? `${viewDoc.chunkCount} chunk${viewDoc.chunkCount !== 1 ? 's' : ''} indexed`
                 : 'Document preview'}
-              {viewDoc?.embeddedWith && (
-                <span className="ml-2 font-mono text-[11px]">· {viewDoc.embeddedWith}</span>
-              )}
             </DialogDescription>
+            {viewDoc && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-medium text-muted-foreground">Embedding model</span>
+                <span
+                  className="rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono"
+                  title={viewDoc.embeddedWith ?? undefined}
+                >
+                  {viewDoc.embeddedWith ?? 'Not stamped — re-index to update'}
+                </span>
+              </div>
+            )}
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden px-6 py-4">

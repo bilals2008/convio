@@ -271,12 +271,6 @@ export function KbSources({
       ),
       sortingFn: 'basic',
     }),
-    columnHelper.accessor('embeddedWith', {
-      header: 'Embedder',
-      cell: ({ row }) => (
-        <span className="font-mono text-xs text-muted-foreground">{row.original.embeddedWith ?? '—'}</span>
-      ),
-    }),
     columnHelper.accessor('createdAt', {
       header: ({ column }) => (
         <button

@@ -92,6 +92,11 @@ const queryClient = new QueryClient({
   },
 })
 
+// Org settings are edited from several pages (profile → embedding/AI model
+// cards) and read from others (knowledge detail summary). Always refetch them
+// on mount so a change made in Settings is never served stale elsewhere.
+queryClient.setQueryDefaults({ queryKey: ['organization'], staleTime: 0 })
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
