@@ -709,6 +709,9 @@ export default function KnowledgeDetailPage() {
               {typeof viewDoc?.chunkCount === 'number'
                 ? `${viewDoc.chunkCount} chunk${viewDoc.chunkCount !== 1 ? 's' : ''} indexed`
                 : 'Document preview'}
+              {viewDoc?.embeddedWith && (
+                <span className="ml-2 font-mono text-[11px]">· {viewDoc.embeddedWith}</span>
+              )}
             </DialogDescription>
           </DialogHeader>
 

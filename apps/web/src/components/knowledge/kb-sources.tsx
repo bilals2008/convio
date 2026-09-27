@@ -521,14 +521,6 @@ export function KbSources({
                   <span>{doc.chunkCount ?? 0} chunks</span>
                   <span className="text-border">·</span>
                   <span>Added {formatRelative(doc.createdAt)}</span>
-                  {doc.embeddedWith && (
-                    <>
-                      <span className="text-border">·</span>
-                      <span className="truncate font-mono" title={`Indexed with ${doc.embeddedWith}`}>
-                        {doc.embeddedWith}
-                      </span>
-                    </>
-                  )}
                 </div>
                 <div className="mt-3 flex items-center gap-0.5 border-t border-border/60 pt-2.5">
                   <button

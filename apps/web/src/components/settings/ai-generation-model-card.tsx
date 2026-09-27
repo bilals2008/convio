@@ -25,10 +25,10 @@ export function AiGenerationModelCard() {
   })
 
   useEffect(() => {
-    if (orgData?.aiGenerationModel && model === '') {
+    if (orgData?.aiGenerationModel) {
       setModel(orgData.aiGenerationModel)
     }
-  }, [orgData, model])
+  }, [orgData])
 
   const mutation = useMutation({
     mutationFn: (value: string) => orgsApi.update(orgId!, { aiGenerationModel: value }),
