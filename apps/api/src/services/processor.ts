@@ -8,26 +8,84 @@ import { mkdtemp, rm, writeFile, readFile, readdir } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { isBlockedAddress, assertSafeUrl } from './ssrf.js'
+import { decryptSecret, getEncryptionKey } from './encryption.js'
 
 export { isBlockedAddress, assertSafeUrl }
 
 const CHUNK_SIZE = 1000
 const CHUNK_OVERLAP_WORDS = 40
-/** Cosine distance upper bound (similarity ≈ 1 - distance). 0.75 ≈ 0.25 similarity. */
+/** Hard cap so a pathological document can't fan out into unbounded inserts/embeds. */
+const MAX_CHUNKS = 5000
+/**
+ * Cosine distance upper bound (similarity ≈ 1 - distance). Calibrated against the
+ * local all-MiniLM-L6-v2 model, whose scores rarely drop below ~0.6 even for
+ * near-exact text matches (measured: exact excerpt ≈ 0.67, related ≈ 0.55,
+ * unrelated ≈ 0.75+). Tighter cutoffs silently return zero results for this
+ * model — if the embedder ever changes, re-measure before touching these.
+ */
 const MAX_DISTANCE = 0.75
 const MAX_DISTANCE_RERANK = 0.85
 const DEFAULT_TOP_K = 5
 const RERANK_CANDIDATES = 20
 
+export type DocumentProcessingStage = 'extract' | 'chunk' | 'store' | 'embed'
+
+/**
+ * Carries the pipeline stage (and the original error) so callers, logs and the
+ * failure notification can tell PDF extraction apart from embedding or a DB write.
+ */
+export class DocumentProcessingError extends Error {
+  readonly stage: DocumentProcessingStage
+  readonly documentId: string
+  readonly originalError: unknown
+
+  constructor(
+    stage: DocumentProcessingStage,
+    documentId: string,
+    message: string,
+    originalError?: unknown,
+  ) {
+    super(message)
+    this.name = 'DocumentProcessingError'
+    this.stage = stage
+    this.documentId = documentId
+    this.originalError = originalError
+  }
+}
+
+/** Word-wrap one oversized block into pieces that each fit within CHUNK_SIZE. */
+function splitLongBlock(text: string): string[] {
+  const words = text.trim().split(/\s+/)
+  const parts: string[] = []
+  let buf: string[] = []
+  let len = 0
+
+  for (const w of words) {
+    if (len + w.length + 1 > CHUNK_SIZE && buf.length > 0) {
+      parts.push(buf.join(' '))
+      buf = []
+      len = 0
+    }
+    buf.push(w)
+    len += w.length + 1
+  }
+  if (buf.length) parts.push(buf.join(' '))
+  return parts
+}
+
 function chunkText(text: string): string[] {
-  const paragraphs = text.split(/\n\s*\n/).filter(Boolean)
+  // Split oversized paragraphs before packing, so the packing loop — and its
+  // overlap — applies to every block, not just the ones already under CHUNK_SIZE.
+  const blocks = text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .flatMap((p) => (p.length > CHUNK_SIZE ? splitLongBlock(p) : [p]))
+
   const chunks: string[] = []
   let current = ''
 
-  for (const p of paragraphs) {
-    const trimmed = p.trim()
-    if (!trimmed) continue
-
+  for (const trimmed of blocks) {
     if (current.length + trimmed.length > CHUNK_SIZE && current.length > 0) {
       chunks.push(current.trim())
       const overlapWords = current.split(/\s+/).slice(-CHUNK_OVERLAP_WORDS).join(' ')
@@ -37,46 +95,90 @@ function chunkText(text: string): string[] {
     }
   }
 
-  // Fallback: long single blocks without blank lines
-  if (!chunks.length && text.trim()) {
-    const words = text.trim().split(/\s+/)
-    let buf: string[] = []
-    let len = 0
-    for (const w of words) {
-      if (len + w.length + 1 > CHUNK_SIZE && buf.length > 0) {
-        chunks.push(buf.join(' '))
-        const overlap = buf.slice(-CHUNK_OVERLAP_WORDS)
-        buf = [...overlap, w]
-        len = buf.join(' ').length
-      } else {
-        buf.push(w)
-        len += w.length + 1
-      }
-    }
-    if (buf.length) chunks.push(buf.join(' '))
-    return chunks
-  }
-
   if (current.trim()) chunks.push(current.trim())
   return chunks
 }
 
 /**
- * all-MiniLM-L6-v2 is 384-d — matches DocumentChunk vector(384).
- * Prefers OpenAI when OPENAI_API_KEY is set, else uses local transformers.js model.
+ * Resolved embedding backend for one organization. 'local' uses the bundled
+ * all-MiniLM-L6-v2 model (384-d); 'openai' uses the org's OpenAI provider key with
+ * text-embedding-3-small pinned to 384 dims. Both match DocumentChunk vector(384).
  */
-export async function embedText(text: string): Promise<number[] | null> {
-  const providerId = process.env.OPENAI_API_KEY ? 'openai' : 'local'
-  const provider = getProviderById(providerId)
+export interface EmbeddingConfig {
+  providerId: 'local' | 'openai'
+  apiKey?: string
+  model?: string
+}
+
+/**
+ * Resolve which backend embeds this org's knowledge base. Defaults to the bundled
+ * local model; uses OpenAI only when selected *and* an OpenAI provider key exists.
+ */
+export async function resolveEmbeddingConfig(organizationId?: string): Promise<EmbeddingConfig> {
+  if (!organizationId) return { providerId: 'local' }
+
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { embeddingProvider: true, embeddingModel: true },
+  })
+
+  if (org?.embeddingProvider !== 'openai') return { providerId: 'local' }
+
+  const key = await prisma.providerKey.findUnique({
+    where: { organizationId_provider: { organizationId, provider: 'openai' } },
+    select: { apiKey: true },
+  })
+  if (!key) {
+    console.warn(
+      '[Embeddings] OpenAI selected but no OpenAI provider key is configured; falling back to local.',
+    )
+    return { providerId: 'local' }
+  }
+
+  return {
+    providerId: 'openai',
+    apiKey: decryptSecret(key.apiKey, getEncryptionKey()),
+    model: org.embeddingModel ?? undefined,
+  }
+}
+
+async function embedWith(config: EmbeddingConfig, text: string): Promise<number[] | null> {
+  const provider = getProviderById(config.providerId)
   if (!provider) return null
 
   try {
-    return await provider.embed(text)
+    return await provider.embed(text, { apiKey: config.apiKey, model: config.model })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`[Embeddings] embed failed (${providerId}):`, message)
+    console.error(`[Embeddings] embed failed (${config.providerId}):`, message)
     return null
   }
+}
+
+/**
+ * Embed a single string using the organization's configured backend. Callers that
+ * embed a batch should resolveEmbeddingConfig once and reuse it via storeChunks.
+ */
+export async function embedText(text: string, organizationId?: string): Promise<number[] | null> {
+  return embedWith(await resolveEmbeddingConfig(organizationId), text)
+}
+
+/**
+ * Pre-load the local embedding model off the request path. Local is the default
+ * backend, so warming it is worthwhile even if some orgs opt into OpenAI.
+ */
+export async function warmEmbeddings(): Promise<void> {
+  const provider = getProviderById('local')
+  await provider?.embed('warmup')
+}
+
+/** Retrieval knows a knowledge base, not an org — bridge to the embedding config. */
+async function embeddingConfigForKnowledgeBase(knowledgeBaseId: string): Promise<EmbeddingConfig> {
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: knowledgeBaseId },
+    select: { organizationId: true },
+  })
+  return resolveEmbeddingConfig(kb?.organizationId)
 }
 
 async function deleteChunks(documentId: string): Promise<void> {
@@ -86,13 +188,17 @@ async function deleteChunks(documentId: string): Promise<void> {
   )
 }
 
-async function storeChunks(documentId: string, chunks: string[]): Promise<number> {
+async function storeChunks(
+  documentId: string,
+  chunks: string[],
+  config: EmbeddingConfig,
+): Promise<number> {
   let stored = 0
 
   for (const chunk of chunks) {
     if (!chunk.trim()) continue
 
-    const embedding = await embedText(chunk)
+    const embedding = await embedWith(config, chunk)
     const vectorStr = embedding ? `[${embedding.join(',')}]` : null
 
     await prisma.$executeRawUnsafe(
@@ -267,18 +373,29 @@ export async function processDocument(
     data: { status: 'processing' },
   })
 
+  const embeddingConfig = await resolveEmbeddingConfig(doc.knowledgeBase.organizationId)
+
+  let stage: DocumentProcessingStage = 'extract'
   try {
     const text = await resolveDocumentText(doc, options?.pdfPath)
     if (!text.trim()) throw new Error('Extracted content is empty')
 
+    stage = 'chunk'
     const chunks = chunkText(text)
     if (!chunks.length) throw new Error('No chunks produced from document')
+    if (chunks.length > MAX_CHUNKS) {
+      throw new Error(
+        `Document produced ${chunks.length} chunks, exceeding the ${MAX_CHUNKS} limit. Split it into smaller documents.`,
+      )
+    }
 
+    stage = 'store'
     await deleteChunks(documentId)
-    const stored = await storeChunks(documentId, chunks)
+    const stored = await storeChunks(documentId, chunks, embeddingConfig)
 
     if (stored === 0) throw new Error('Failed to store any chunks')
 
+    stage = 'embed'
     // Warn via status if embeddings are missing (no OpenAI key)
     const withEmbeddings = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
       `SELECT COUNT(*)::bigint AS count FROM "DocumentChunk"
@@ -292,25 +409,34 @@ export async function processDocument(
       )
     }
 
-  await prisma.document.update({
-    where: { id: documentId },
-    data: {
-      content: text.slice(0, 200_000),
-      status: 'ready',
-    },
-  })
+    await prisma.document.update({
+      where: { id: documentId },
+      data: {
+        content: text.slice(0, 200_000),
+        status: 'ready',
+      },
+    })
   } catch (err) {
     await prisma.document.update({
       where: { id: documentId },
       data: { status: 'error' },
     })
+    const wrapped =
+      err instanceof DocumentProcessingError
+        ? err
+        : new DocumentProcessingError(
+            stage,
+            documentId,
+            err instanceof Error ? err.message : 'Document processing failed',
+            err,
+          )
     emitDomainEvent(NOTIFICATION_EVENTS.DOCUMENT_FAILED, {
       organizationId: doc.knowledgeBase.organizationId,
       entityId: doc.id,
       entityName: doc.name,
-      metadata: { error: err instanceof Error ? err.message : 'Document processing failed' },
+      metadata: { error: wrapped.message, stage: wrapped.stage },
     })
-    throw err instanceof Error ? err : new Error('Document processing failed')
+    throw wrapped
   }
 }
 
@@ -363,7 +489,7 @@ export async function retrieveContext(
   useReranker = true,
   messageId?: string,
 ): Promise<string> {
-  const embedding = await embedText(query)
+  const embedding = await embedWith(await embeddingConfigForKnowledgeBase(knowledgeBaseId), query)
   if (!embedding) return ''
 
   const vectorStr = `[${embedding.join(',')}]`
@@ -406,7 +532,12 @@ export async function retrieveContext(
   }
 
   if (messageId) {
-    trackDocumentQueries(final, messageId).catch(() => {})
+    trackDocumentQueries(final, messageId).catch((err) =>
+      console.error(
+        '[Retrieval] Document query tracking failed:',
+        err instanceof Error ? err.message : err,
+      ),
+    )
   }
 
   return final
@@ -423,7 +554,7 @@ export async function retrieveChunks(
   limit = DEFAULT_TOP_K,
   useReranker = true,
 ): Promise<RetrievedChunk[]> {
-  const embedding = await embedText(query)
+  const embedding = await embedWith(await embeddingConfigForKnowledgeBase(knowledgeBaseId), query)
   if (!embedding) return []
 
   const vectorStr = `[${embedding.join(',')}]`

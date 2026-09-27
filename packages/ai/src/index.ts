@@ -4,7 +4,7 @@ export interface AIProvider {
   name: string
   generate(params: GenerateParams): Promise<GenerateResult>
   stream(params: GenerateParams): AsyncIterable<StreamChunk>
-  embed(text: string): Promise<number[]>
+  embed(text: string, options?: EmbedOptions): Promise<number[]>
   moderate(text: string): Promise<ModerationResult>
   listModels(apiKey?: string): Promise<Model[]>
 }
@@ -31,6 +31,13 @@ export interface Tool {
   name: string
   description: string
   parameters: Record<string, unknown>
+}
+
+export interface EmbedOptions {
+  /** Optional BYOK key; providers fall back to their env key when omitted. */
+  apiKey?: string
+  /** Optional model override for embedding, e.g. 'text-embedding-3-small'. */
+  model?: string
 }
 
 export interface GenerateResult {
