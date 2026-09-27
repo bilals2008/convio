@@ -1,13 +1,12 @@
 import { useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { FileQuestion } from 'lucide-react'
+import { useParams } from 'react-router-dom'
 import { DocsIndex } from '@/components/docs/docs-index'
 import { DocsLayout } from '@/components/docs/docs-layout'
+import { DocsShell } from '@/components/docs/docs-shell'
 import { EmptyState } from '@/components/shared/empty-state'
-import { buttonVariants } from '@/components/ui/button'
+import { FileQuestion } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDoc } from '@/lib/hooks/use-doc'
-import { cn } from '@/lib/utils'
 
 export default function DocsPage() {
   const params = useParams()
@@ -19,23 +18,27 @@ export default function DocsPage() {
   }, [doc])
 
   if (slug === '') return <DocsIndex />
-  if (isPending || doc === undefined) return <DocSkeleton />
+  // The shell stays mounted across a navigation: the sidebar, topbar and TOC rail are
+  // the reader's frame, and swapping the whole page for a skeleton throws it away.
+  if (isPending || doc === undefined) {
+    return (
+      <DocsShell>
+        <DocSkeleton />
+      </DocsShell>
+    )
+  }
 
   if (doc === null) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
-        <Link
-          to="/docs"
-          className={cn(buttonVariants({ variant: 'outline' }), 'absolute top-6 left-6')}
-        >
-          Back to docs
-        </Link>
-        <EmptyState
-          icon={FileQuestion}
-          title="Page not found"
-          description="This documentation page has not been written yet."
-        />
-      </div>
+      <DocsShell>
+        <div className="py-16">
+          <EmptyState
+            icon={FileQuestion}
+            title="Page not found"
+            description="This documentation page has not been written yet."
+          />
+        </div>
+      </DocsShell>
     )
   }
 
@@ -44,7 +47,7 @@ export default function DocsPage() {
 
 function DocSkeleton() {
   return (
-    <div className="mx-auto max-w-[42rem] py-10">
+    <div className="max-w-[44rem]">
       <Skeleton className="h-9 w-2/3" />
       <Skeleton className="mt-4 h-4 w-full" />
       <Skeleton className="mt-2 h-4 w-5/6" />

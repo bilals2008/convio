@@ -10,30 +10,6 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import type { DocHeading } from '@/lib/docs/content'
 import { cn } from '@/lib/utils'
 
-function ReadingProgress() {
-  const [progress, setProgress] = useState(0)
-
-  useEffect(() => {
-    function onScroll() {
-      const scrollTop = window.scrollY
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight
-      setProgress(docHeight > 0 ? Math.min(scrollTop / docHeight, 1) : 0)
-    }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  return (
-    <div className="fixed top-0 right-0 left-0 z-[60] h-0.5 bg-transparent">
-      <div
-        className="h-full bg-primary transition-[width] duration-100 ease-out"
-        style={{ width: `${progress * 100}%` }}
-      />
-    </div>
-  )
-}
-
 /** Both rails clear the 4rem topbar and own the rest of the viewport. */
 const RAIL = 'sticky top-16 h-[calc(100dvh-4rem)]'
 
@@ -102,7 +78,6 @@ export function DocsShell({
 
   return (
     <div className="docs-shell min-h-screen bg-background">
-      <ReadingProgress />
       <DocsTopbar
         onOpenNav={() => setNavOpen(true)}
         searchOpen={searchOpen}

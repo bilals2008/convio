@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { docSections, type DocPage, type DocSection } from '@/lib/docs/nav'
 import { prefetchDoc } from '@/lib/docs/content'
@@ -14,11 +15,6 @@ function isActive(pathname: string, slug: string): boolean {
   const current = pathname.replace(/\/+$/, '')
   return current === (slug ? `/docs/${slug}` : '/docs')
 }
-
-const BADGE_STYLES = {
-  new: 'bg-primary/10 text-primary',
-  popular: 'bg-secondary text-secondary-foreground',
-} as const
 
 const ITEM_BASE =
   'group relative flex items-center gap-2.5 rounded-md py-1.5 pl-2.5 pr-2 text-[13.5px] leading-5 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring/60'
@@ -71,14 +67,9 @@ function NavItem({
         )}
         <span className="min-w-0 flex-1 truncate">{page.title}</span>
         {page.badge && (
-          <span
-            className={cn(
-              'shrink-0 rounded-full px-1.5 text-[10px] leading-4 font-medium tracking-wide uppercase',
-              BADGE_STYLES[page.badge],
-            )}
-          >
-            {page.badge}
-          </span>
+          <Badge variant="soon" className="h-4 shrink-0 px-1.5 py-0 leading-none">
+            Soon
+          </Badge>
         )}
       </Link>
 
