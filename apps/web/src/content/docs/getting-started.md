@@ -6,31 +6,25 @@ Everything you need to be productive in Convio, in one place.
 
 Go to the home page and choose **Get Started**. Register with an email address and password, or continue with Google. No card, no trial countdown.
 
-We send a verification link to your address. Until you verify it, some settings stay read-only and outbound channels cannot be enabled. The link expires. Request a new one from the login screen if it lapses. If the email never arrives, check spam and confirm your sending domain is verified.
+We send a verification link to your address. The link expires — request a new one from the login screen if it lapses. If the email never arrives, check spam and confirm your sending domain is verified.
+
+> [!NOTE]
+> **Verification unlocks the workspace**
+>
+> Until you verify, some settings stay read-only and outbound channels cannot be enabled.
 
 To come back, use the same credentials, or Google if you registered that way. Password resets are self-serve from the login screen.
 
-## Create an organization
-
-An **organization** is the workspace boundary. Agents, knowledge bases, widgets, deployments, provider keys, and billing all live inside one, and members only see the organizations they belong to.
-
-Choose **New organization** from the org switcher, then give it a name and a slug. The slug becomes part of your public URLs, so pick something you can live with. Changing it later breaks existing embeds and shared links.
-
-You can belong to several organizations and switch between them from the sidebar. Each switch changes the entire context: data, permissions, and sidebar all follow the active org. This is the normal setup for agencies, one org per client.
-
 ## The dashboard
 
-**Sidebar**: scoped to the current organization, with the org switcher at the top.
-
-**Quick stats**: conversations, message volume, active agents, and token spend for the period. Spend is the one to watch.
-
-**Agents**: every agent with its status, model, and last activity. Click one to edit its prompt or open the playground.
-
-**Conversations**: every message an agent has sent or received, across all channels, filterable by agent. This is where you debug a bad answer: find the conversation, read the transcript, fix the prompt.
-
-**Knowledge**: your document collections and what is indexed in them.
-
-**Settings**: organization, team members, provider keys, billing, and audit logs.
+| Area | What it shows |
+|---|---|
+| **Sidebar** | Scoped to the current organization, with the org switcher at the top. |
+| **Quick stats** | Conversations, message volume, active agents, and token spend for the period. Spend is the one to watch. |
+| **Agents** | Every agent with its status, model, and last activity. Click one to edit its prompt or open the playground. |
+| **Conversations** | Every message an agent has sent or received, across all channels, filterable by agent. This is where you debug a bad answer: find the conversation, read the transcript, fix the prompt. |
+| **Knowledge** | Your document collections and what is indexed in them. |
+| **Settings** | Organization, team members, provider keys, billing, and audit logs. |
 
 ![The Convio dashboard, with the organization switcher at the top of the sidebar and quick stats for conversations, agents, and token spend](https://placehold.co/1280x720)
 
@@ -67,15 +61,11 @@ The owner controls the three irreversible things: deleting the organization, wip
 > [!WARNING]
 > **Transfer ownership before the owner leaves**
 >
-> A transfer needs the current owner's session. Once they are gone the organization is stuck. Nobody can delete it or wipe its data.
-
-**If the owner leaves the company, transfer before they go.** A transfer needs the current owner's session, so once they are gone the organization is stuck. This is the most common way organizations get stranded.
+> A transfer needs the current owner's session. Once they are gone the organization is stuck — nobody can delete it or wipe its data. This is the most common way organizations get stranded.
 
 ## Leaving an organization
 
-Members and admins can remove themselves from the team list. Owners cannot. They have to hand the role over first, or nobody will be able to delete the org or wipe its data.
-
-Leaving removes your access, not your contributions. Everything you built stays and keeps working.
+Members and admins can remove themselves from the team list. Owners cannot — they have to [transfer ownership](#ownership) first.
 
 ## Your account security
 
@@ -87,22 +77,15 @@ Sign-in activity is about your account. The **Settings → Audit log** page is a
 
 ## Glossary
 
-**Agent**: the brain behind a conversation: a model, a system prompt, and the tools it may call.
-
-**Model**: the engine. Knows how to produce text, nothing about your business.
-
-**Bot**: what a visitor perceives. In Convio a bot is a *deployment* of an agent on a channel, not a separate object.
-
-**Organization**: the workspace boundary. Owns agents, knowledge, widgets, keys, members, and billing.
-
-**Deployment**: a published version of an agent on a channel. Editing the agent does not change what is deployed until you redeploy.
-
-**Widget**: the embeddable web chat client you drop into your site.
-
-**Knowledge base**: documents an agent can retrieve from, so answers are grounded in your content.
-
-**Tool**: a capability an agent may call: a search, an API call, a Composio integration, or a connected MCP server.
-
-**MCP**: Model Context Protocol, an open standard for exposing tools and data to a model.
-
-**Conversation**: one thread of messages between a user and an agent, on one channel.
+| Term | Meaning |
+|---|---|
+| **Agent** | The brain behind a conversation: a model, a system prompt, and the tools it may call. |
+| **Model** | The engine. Knows how to produce text, nothing about your business. |
+| **Bot** | What a visitor perceives. In Convio a bot is a *deployment* of an agent on a channel, not a separate object. |
+| **Organization** | The workspace boundary. Owns agents, knowledge, widgets, keys, members, and billing. |
+| **Deployment** | A published version of an agent on a channel. Editing the agent does not change what is deployed until you redeploy. |
+| **Widget** | The embeddable web chat client you drop into your site. |
+| **Knowledge base** | Documents an agent can retrieve from, so answers are grounded in your content. |
+| **Tool** | A capability an agent may call: a search, an API call, a Composio integration, or a connected MCP server. |
+| **MCP** | Model Context Protocol, an open standard for exposing tools and data to a model. |
+| **Conversation** | One thread of messages between a user and an agent, on one channel. |

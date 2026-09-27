@@ -9,6 +9,7 @@ export interface Doc {
   /** Raw markdown, including the leading `# Title`. */
   body: string
   headings: DocHeading[]
+  updatedAt?: string
 }
 
 // One lazy chunk per markdown file, so the docs corpus never lands in the main bundle.
@@ -28,7 +29,9 @@ function parse(slug: string, raw: string): Doc {
       .map((line) => line.trim())
       .find((line) => line && !line.startsWith('#') && !line.startsWith('```') && !line.startsWith('>')) ?? ''
 
-  return { slug, title, description, body: raw, headings: extractHeadings(raw) }
+  const updatedAt = /<!--\s*updated:\s*(\d{4}-\d{2}-\d{2})\s*-->/i.exec(raw)?.[1]
+
+  return { slug, title, description, body: raw, headings: extractHeadings(raw), updatedAt }
 }
 
 export async function getDoc(slug: string): Promise<Doc | null> {

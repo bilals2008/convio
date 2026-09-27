@@ -13,10 +13,11 @@ const BLURBS: Record<string, string> = {
   'knowledge-bases': 'Ground answers in your documents instead of the model’s memory.',
   channels: 'Deploy to the web widget, WhatsApp, Slack, Telegram, Discord, and SMS.',
   billing: 'How token usage is metered, plans, trials, and keeping costs predictable.',
-  'examples/support-faq': 'Answer product questions from your help docs in five minutes.',
-  'examples/lead-capture': 'Qualify visitors one question at a time and hand off warm leads.',
-  'examples/whatsapp-orders': 'Instant, correct order status on your WhatsApp business number.',
-  'examples/internal-helpdesk': 'Your team’s questions answered from the docs you already have.',
+  'use-cases/whatsapp-support': 'Deploy an AI agent on your WhatsApp Business number for instant customer support.',
+  'use-cases/slack-helpdesk': 'Give your team an AI assistant in Slack that answers internal questions instantly.',
+  'use-cases/lead-qualification': 'Replace static forms with a conversational widget that qualifies website visitors.',
+  'use-cases/telegram-community': 'Add an AI bot to your Telegram group to answer questions and share resources 24/7.',
+  'use-cases/sms-appointments': 'Send automated SMS reminders, confirmations, and booking follow-ups via Twilio.',
 }
 
 const STEPS = [

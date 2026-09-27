@@ -1,15 +1,15 @@
 import {
   BookOpen,
   Bot,
+  Calendar,
   CreditCard,
   Headphones,
   Library,
-  MessagesSquare,
+  MessageCircle,
   PenLine,
   RadioTower,
   Rocket,
   Target,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -59,12 +59,13 @@ export const docSections: DocSection[] = [
     ],
   },
   {
-    title: 'Examples',
+    title: 'Use cases',
     pages: [
-      { title: 'Support FAQ agent', slug: 'examples/support-faq', icon: MessagesSquare },
-      { title: 'Lead capture agent', slug: 'examples/lead-capture', icon: Target },
-      { title: 'WhatsApp order status', slug: 'examples/whatsapp-orders', icon: Headphones },
-      { title: 'Internal helpdesk', slug: 'examples/internal-helpdesk', icon: Wrench },
+      { title: 'WhatsApp support', slug: 'use-cases/whatsapp-support', icon: MessageCircle },
+      { title: 'Slack helpdesk', slug: 'use-cases/slack-helpdesk', icon: Headphones },
+      { title: 'Lead qualification', slug: 'use-cases/lead-qualification', icon: Target },
+      { title: 'Telegram community', slug: 'use-cases/telegram-community', icon: RadioTower },
+      { title: 'SMS appointments', slug: 'use-cases/sms-appointments', icon: Calendar },
     ],
   },
 ]

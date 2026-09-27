@@ -78,8 +78,12 @@ export function buildLlmsFiles(outDir: string): void {
     .map((doc) => `<!-- ${doc.url} -->\n\n${doc.body.trim()}`)
     .join("\n\n---\n\n")
 
+  // llms.txt is the spec name; llm.txt is what a lot of crawlers still probe for.
+  // Same bytes, both paths.
+  const indexText = `${index.join("\n")}`
   mkdirSync(outDir, { recursive: true })
-  writeFileSync(join(outDir, "llms.txt"), index.join("\n"), "utf8")
+  writeFileSync(join(outDir, "llms.txt"), indexText, "utf8")
+  writeFileSync(join(outDir, "llm.txt"), indexText, "utf8")
   writeFileSync(join(outDir, "llms-full.txt"), `# Convio — full documentation\n\n${full}\n`, "utf8")
 
   for (const doc of docs) {

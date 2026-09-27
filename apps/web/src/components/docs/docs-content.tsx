@@ -1,19 +1,61 @@
-import { Children, isValidElement, type ReactNode } from 'react'
+import { Children, isValidElement, useState, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Link } from 'lucide-react'
 import { DocsCallout } from '@/components/docs/docs-callout'
 import { DocsImage } from '@/components/docs/docs-image'
 import { CodeBlock } from '@/components/shared/code-block'
 import { slugify, parseCallout, toText, unwrapImages } from '@/lib/docs/markdown'
 
-/** Docs screenshots are 16:9 until a real capture says otherwise. */
 const PLACEHOLDER_SIZE = { width: 1280, height: 720 } as const
 
+function HeadingLink({ id, children }: { id: string; children: ReactNode }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const url = `${window.location.origin}${window.location.pathname}#${id}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard unavailable
+    }
+  }
+
+  return (
+    <a
+      href={`#${id}`}
+      onClick={handleCopy}
+      className="group/link relative inline-flex items-center gap-1.5 no-underline"
+      aria-label="Copy link to this section"
+    >
+      {children}
+      <Link className="size-4 opacity-0 transition-opacity group-hover/link:opacity-60" aria-hidden="true" />
+      {copied && <span className="sr-only">Link copied</span>}
+    </a>
+  )
+}
+
 const components: Components = {
-  // Ids come from the shared slugify so they always match DocHeading[] in the TOC —
-  // including headings whose children are a mix of text and inline markup.
-  h2: ({ children }) => <h2 id={slugify(toText(children))}>{children}</h2>,
-  h3: ({ children }) => <h3 id={slugify(toText(children))}>{children}</h3>,
+  h2: ({ children }) => {
+    const id = slugify(toText(children))
+    return (
+      <h2 id={id}>
+        <HeadingLink id={id}>{children}</HeadingLink>
+      </h2>
+    )
+  },
+  h3: ({ children }) => {
+    const id = slugify(toText(children))
+    return (
+      <h3 id={id}>
+        <HeadingLink id={id}>{children}</HeadingLink>
+      </h3>
+    )
+  },
   pre({ children }) {
     const child = Children.only(children)
     if (!isValidElement(child)) return null

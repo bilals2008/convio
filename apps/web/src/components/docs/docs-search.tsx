@@ -67,9 +67,9 @@ export function DocsSearch({
 
       <CommandDialog open={open} onOpenChange={onOpenChange}>
         <CommandInput placeholder="Search documentation…" />
-        <CommandList>
+        <CommandList className="max-h-[50vh]">
           <CommandEmpty>No results.</CommandEmpty>
-          {Object.entries(
+          {Array.from(
             items.reduce<Map<string, SearchItem[]>>((map, item) => {
               return map.set(item.section, [...(map.get(item.section) ?? []), item])
             }, new Map()),
@@ -85,8 +85,8 @@ export function DocsSearch({
                   }}
                 >
                   <FileText />
-                  <span className="flex flex-col gap-0.5">
-                    <span>{item.title}</span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate">{item.title}</span>
                     {item.description && (
                       <span className="truncate text-xs text-muted-foreground">
                         {item.description}
