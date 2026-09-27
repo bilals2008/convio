@@ -38,6 +38,11 @@ export interface EmbedOptions {
   apiKey?: string
   /** Optional model override for embedding, e.g. 'text-embedding-3-small'. */
   model?: string
+  /**
+   * Whether this is a search query or stored content. Some model families
+   * (bge, e5) require an instruction prefix on one side for best retrieval.
+   */
+  task?: 'query' | 'document'
 }
 
 export interface GenerateResult {

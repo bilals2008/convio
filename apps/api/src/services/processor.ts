@@ -100,9 +100,13 @@ function chunkText(text: string): string[] {
 }
 
 /**
- * Resolved embedding backend for one organization. 'local' uses the bundled
- * all-MiniLM-L6-v2 model (384-d); 'openai' uses the org's OpenAI provider key with
+ * Resolved embedding backend for one organization. 'local' uses a bundled
+ * transformers.js model (384-d); 'openai' uses the org's OpenAI provider key with
  * text-embedding-3-small pinned to 384 dims. Both match DocumentChunk vector(384).
+ *
+ * model for 'local' is a LocalEmbeddingModelId key (all-minilm | bge-small |
+ * multilingual-e5); for 'openai' it's an OpenAI model id. Switching either one
+ * changes the vector space — documents must be re-indexed after a switch.
  */
 export interface EmbeddingConfig {
   providerId: 'local' | 'openai'
@@ -142,12 +146,16 @@ export async function resolveEmbeddingConfig(organizationId?: string): Promise<E
   }
 }
 
-async function embedWith(config: EmbeddingConfig, text: string): Promise<number[] | null> {
+async function embedWith(
+  config: EmbeddingConfig,
+  text: string,
+  task: 'query' | 'document' = 'document',
+): Promise<number[] | null> {
   const provider = getProviderById(config.providerId)
   if (!provider) return null
 
   try {
-    return await provider.embed(text, { apiKey: config.apiKey, model: config.model })
+    return await provider.embed(text, { apiKey: config.apiKey, model: config.model, task })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`[Embeddings] embed failed (${config.providerId}):`, message)
@@ -198,7 +206,7 @@ async function storeChunks(
   for (const chunk of chunks) {
     if (!chunk.trim()) continue
 
-    const embedding = await embedWith(config, chunk)
+    const embedding = await embedWith(config, chunk, 'document')
     const vectorStr = embedding ? `[${embedding.join(',')}]` : null
 
     await prisma.$executeRawUnsafe(
@@ -489,7 +497,7 @@ export async function retrieveContext(
   useReranker = true,
   messageId?: string,
 ): Promise<string> {
-  const embedding = await embedWith(await embeddingConfigForKnowledgeBase(knowledgeBaseId), query)
+  const embedding = await embedWith(await embeddingConfigForKnowledgeBase(knowledgeBaseId), query, 'query')
   if (!embedding) return ''
 
   const vectorStr = `[${embedding.join(',')}]`
@@ -554,7 +562,7 @@ export async function retrieveChunks(
   limit = DEFAULT_TOP_K,
   useReranker = true,
 ): Promise<RetrievedChunk[]> {
-  const embedding = await embedWith(await embeddingConfigForKnowledgeBase(knowledgeBaseId), query)
+  const embedding = await embedWith(await embeddingConfigForKnowledgeBase(knowledgeBaseId), query, 'query')
   if (!embedding) return []
 
   const vectorStr = `[${embedding.join(',')}]`
