@@ -114,6 +114,12 @@ export interface EmbeddingConfig {
   model?: string
 }
 
+/** Human-readable stamp stored on Document.embeddedWith, e.g. 'local:bge-small'. */
+export function embeddingStamp(config: EmbeddingConfig): string {
+  const model = config.model ?? (config.providerId === 'openai' ? 'text-embedding-3-small' : 'all-minilm')
+  return `${config.providerId}:${model}`
+}
+
 /**
  * Resolve which backend embeds this org's knowledge base. Defaults to the bundled
  * local model; uses OpenAI only when selected *and* an OpenAI provider key exists.
@@ -422,6 +428,7 @@ export async function processDocument(
       data: {
         content: text.slice(0, 200_000),
         status: 'ready',
+        embeddedWith: embeddingStamp(embeddingConfig),
       },
     })
   } catch (err) {
