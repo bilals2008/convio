@@ -85,6 +85,7 @@ export default function KnowledgeDetailPage() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [reprocessingId, setReprocessingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -311,6 +312,8 @@ export default function KnowledgeDetailPage() {
   }, [isCreate, kb, form])
 
   const handleDeleteDocument = async (docId: string) => {
+    if (deletingId) return // one delete at a time; the row shows its own spinner
+    setDeletingId(docId)
     try {
       await knowledgeApi.deleteDocument(docId)
       queryClient.invalidateQueries({ queryKey: ['knowledge-base-documents', id] })
@@ -318,6 +321,8 @@ export default function KnowledgeDetailPage() {
       toast.success('Document deleted')
     } catch {
       toast.error('Failed to delete document')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -448,9 +453,20 @@ export default function KnowledgeDetailPage() {
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected)
-    for (const docId of ids) await handleDeleteDocument(docId)
+    for (const docId of ids) {
+      setDeletingId(docId)
+      try {
+        await knowledgeApi.deleteDocument(docId)
+        queryClient.invalidateQueries({ queryKey: ['knowledge-base-documents', id] })
+      } catch {
+        toast.error(`Failed to delete document`)
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['knowledge-base', id] })
     setSelected(new Set())
     setSelectionMode(false)
+    setDeletingId(null)
+    if (ids.length > 0) toast.success(`${ids.length} document${ids.length !== 1 ? 's' : ''} deleted`)
   }
 
   const handleBulkReprocess = async () => {
@@ -622,6 +638,7 @@ export default function KnowledgeDetailPage() {
                 onDelete={handleDeleteDocument}
                 onReprocess={handleReprocess}
                 reprocessingId={reprocessingId}
+                deletingId={deletingId}
                 onBulkDelete={handleBulkDelete}
                 onBulkReprocess={handleBulkReprocess}
                 onUploadFiles={handleUploadFiles}
