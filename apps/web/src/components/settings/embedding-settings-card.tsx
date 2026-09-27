@@ -3,14 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Cpu, TriangleAlert } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+  ComboboxValue,
+} from '@/components/ui/combobox'
 import { organizations as orgsApi } from '@/lib/api'
 import { useOrg } from '@/lib/org-context'
 import { toast } from '@/lib/toast'
@@ -18,11 +19,20 @@ import { toastMutationError } from '@/lib/api/mutation-error'
 
 type EmbeddingProvider = 'local' | 'openai'
 
+const PROVIDER_ITEMS = [
+  { value: 'local' as const, label: 'Local (built-in)', description: 'Runs on your server — no API key, downloads once' },
+  { value: 'openai' as const, label: 'OpenAI', description: 'Uses your OpenAI key from Provider Keys' },
+]
+
 const LOCAL_MODELS = [
-  { value: 'all-minilm', label: 'MiniLM (default)', hint: 'Fastest, English' },
-  { value: 'bge-small', label: 'BGE Small', hint: 'Better quality, English, same speed' },
-  { value: 'multilingual-e5', label: 'Multilingual E5', hint: 'Urdu, Hindi, Arabic, Chinese + English' },
+  { value: 'all-minilm', label: 'MiniLM', description: 'Default — fastest, English' },
+  { value: 'bge-small', label: 'BGE Small', description: 'Better quality, English, same speed' },
+  { value: 'multilingual-e5', label: 'Multilingual E5', description: 'Urdu, Hindi, Arabic, Chinese + English' },
 ] as const
+
+const MODEL_LABEL: Record<string, string> = Object.fromEntries(
+  LOCAL_MODELS.map((m) => [m.value, m.label]),
+)
 
 interface EmbeddingOrg {
   embeddingProvider?: string | null
@@ -95,54 +105,74 @@ export function EmbeddingSettingsCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="embedding-provider">Embedding provider</Label>
-          <Select
-            value={provider}
-            onValueChange={(value) => {
-              const next = value as EmbeddingProvider
-              setProvider(next)
-              save(next, next === 'local' ? '' : model)
+          <Label>Embedding provider</Label>
+          <Combobox
+            items={PROVIDER_ITEMS}
+            value={PROVIDER_ITEMS.find((p) => p.value === provider)}
+            onValueChange={(item) => {
+              if (!item) return
+              setProvider(item.value)
+              save(item.value, item.value === 'local' ? '' : model)
             }}
+            itemToStringValue={(item) => item.label}
           >
-            <SelectTrigger id="embedding-provider">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="local">Local (built-in)</SelectItem>
-              <SelectItem value="openai">OpenAI</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {provider === 'openai'
-              ? 'Uses your OpenAI key from Provider Keys.'
-              : 'Runs on your server — no API key, downloads once.'}
-          </p>
+            <ComboboxTrigger className="flex h-9 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm">
+              <ComboboxValue>
+                {(item) => item.label}
+              </ComboboxValue>
+            </ComboboxTrigger>
+            <ComboboxContent>
+              <ComboboxEmpty>No providers found.</ComboboxEmpty>
+              <ComboboxList>
+                {PROVIDER_ITEMS.map((p) => (
+                  <ComboboxItem key={p.value} value={p} className="items-start py-2">
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm font-medium">{p.label}</span>
+                      <span className="text-xs text-muted-foreground">{p.description}</span>
+                    </span>
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </div>
 
         {provider === 'local' && (
           <div className="space-y-2">
             <Label htmlFor="embedding-model">Model</Label>
-            <Select
-              value={model || 'all-minilm'}
-              onValueChange={(value) => {
-                setModel(value === 'all-minilm' ? '' : value)
-                save('local', value === 'all-minilm' ? '' : value)
+            <Combobox
+              items={LOCAL_MODELS}
+              value={LOCAL_MODELS.find((m) => m.value === (model || 'all-minilm'))}
+              onValueChange={(item) => {
+                if (!item) return
+                setModel(item.value === 'all-minilm' ? '' : item.value)
+                save('local', item.value === 'all-minilm' ? '' : item.value)
               }}
+              itemToStringValue={(item) => item.label}
             >
-              <SelectTrigger id="embedding-model">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LOCAL_MODELS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <span className="flex items-center gap-2">
-                      {m.label}
-                      <span className="text-xs text-muted-foreground">{m.hint}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <ComboboxTrigger
+                id="embedding-model"
+                className="flex h-9 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
+              >
+                <ComboboxValue>{(item) => item.label}</ComboboxValue>
+              </ComboboxTrigger>
+              <ComboboxContent className="w-[var(--anchor-width)]">
+                <ComboboxEmpty>No models found.</ComboboxEmpty>
+                <ComboboxList>
+                  {LOCAL_MODELS.map((m) => (
+                    <ComboboxItem key={m.value} value={m} className="items-start py-2">
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="text-sm font-medium">{m.label}</span>
+                        <span className="text-xs text-muted-foreground">{m.description}</span>
+                      </span>
+                    </ComboboxItem>
+                  ))}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+            <p className="text-xs text-muted-foreground">
+              Currently: {MODEL_LABEL[model || 'all-minilm'] ?? model || 'MiniLM'}
+            </p>
           </div>
         )}
 
