@@ -1,12 +1,6 @@
 # Writing system prompts
 
-The system prompt is the highest-leverage field you own. The model is rented; this is yours.
-
-## What it actually is
-
-A system prompt is standing instructions that apply to every turn of every conversation that agent handles. Not a greeting, not a persona name, not a one-off. It is the frame the model reads before anything else.
-
-Everything the agent knows about your business that is not in a knowledge base has to be here.
+The system prompt is the highest-leverage field you own. The model is rented; this is yours. Everything the agent knows about your business that is not in a knowledge base has to be here.
 
 ## The shape that works
 

@@ -1,35 +1,23 @@
 # Channels and deployment
 
-A **deployment** is a published version of an agent on a channel. Editing the agent does not change what is already deployed. The agent and the deployment are separate objects, and that separation is the point.
+How to publish an agent to your website, WhatsApp, Slack, Telegram, Discord, or SMS.
 
-## Why the separation matters
+A **deployment** is a published version of an agent on a channel. Editing the agent does not change what is already deployed — deploy when you are ready, not when you save.
 
-It means you can change a prompt all afternoon without a single visitor seeing it. Deploy when you are ready, not when you save.
+## Deploy to the web widget
 
-It also means the reverse: an agent can be `active` and still have no web presence, because a deployment was never created. If your agent "is live" but the site is silent, this, not the status, is the thing to check.
-
-## Web widget
-
-The widget is the embeddable chat client. Each one gets a **public key** and can be created per agent or shared.
-
-From **Widgets → New**, pick the agent, name it, and configure the look. Then embed the snippet in your site. The key is public by design. It is not a secret and does not need to be.
-
-### Domain allowlist
-
-`allowedDomains` restricts which sites may load the widget. Leave it empty and the widget loads anywhere; list your domains and it refuses to load elsewhere.
-
-Turn it on before you go live. A public key with no allowlist means anyone can embed your agent on their site, and you will pay for their traffic.
+1. **Widgets → New**, pick the agent, name it, and configure the look.
+2. **Set the domain allowlist** before you publish. `allowedDomains` restricts which sites may load the widget. Leave it empty and the widget loads anywhere.
 
 > [!WARNING]
 > **Set the allowlist before you publish**
 >
 > `allowedDomains` is empty by default, so a public key loads anywhere. Anyone who finds it can put your agent on their site and run up your bill.
 
-### Widget status
+3. **Embed the snippet** in your site. The public key is public by design — it is not a secret and does not need to be.
+4. Widgets start as **draft** and render nothing. A widget can be draft while its agent is active; that is the normal state before you publish.
 
-Widgets have their own status and also start as **draft**. A draft widget renders nothing. This is separate from the agent's status. A widget can be draft while its agent is active, and that is the normal state before you publish.
-
-## Other channels
+## Deploy to a messaging channel
 
 Beyond the widget, agents can be published to messaging and telephony surfaces. Convio ships integrations for:
 
@@ -39,13 +27,13 @@ Beyond the widget, agents can be published to messaging and telephony surfaces. 
 - **Discord**
 - **Twilio**: SMS and voice
 
-Each is a deployment with its own credentials and configuration. The agent, prompt, knowledge, and tools are shared. You are publishing the same brain to a different surface, not rebuilding it.
+Each is a deployment with its own credentials and configuration. The agent, prompt, knowledge, and tools are shared — you are publishing the same brain to a different surface, not rebuilding it.
 
 ![The deployment list, showing one agent published to several channels at once](https://placehold.co/1280x720)
 
-## Deploying
+## The release checklist
 
-1. The agent is `active`, see [agent statuses](/docs/agents#statuses)
+1. The agent is `active`, see [agent statuses](/docs/agents#set-the-status)
 2. Create the deployment for the channel
 3. Complete the channel's own credentials and settings
 4. Send a real message through the real surface and confirm the answer
@@ -53,7 +41,7 @@ Each is a deployment with its own credentials and configuration. The agent, prom
 
 Step 4 is the one people skip. Credentials can be wrong, a number can be unlinked, a channel can reject the format, and the deployment will still report as fine.
 
-## Unpublishing
+## Unpublish
 
 Setting a deployment to inactive stops it accepting new conversations on that channel. Other channels keep working, and the deployment can be resumed.
 

@@ -1,10 +1,16 @@
 # Getting started
 
-Everything you need to be productive in Convio, in one place.
+Your first agent, live on a channel, in one sitting.
 
-## Create an account
+## The five steps
 
-Go to the home page and choose **Get Started**. Register with an email address and password, or continue with Google. No card, no trial countdown.
+1. **Create an account.** Go to the home page and choose **Get Started**. Register with an email address and password, or continue with Google. No card, no trial countdown.
+2. **Create an organization.** Choose **New organization** from the org switcher, give it a name and a slug. The slug becomes part of your public URLs, so pick something you can live with — changing it later breaks existing embeds and shared links.
+3. **Create an agent.** **Agents → New**, name it, pick a model, write a system prompt. Everything else can come later.
+4. **Test in the playground.** Ask real questions, read the answers, fix the prompt. New agents start as `draft` and do not accept conversations; the playground ignores status, production does not.
+5. **Deploy.** Set the status to `active`, deploy to a channel, and send a real message through the real surface.
+
+## Verify your email
 
 We send a verification link to your address. The link expires — request a new one from the login screen if it lapses. If the email never arrives, check spam and confirm your sending domain is verified.
 
@@ -27,15 +33,6 @@ To come back, use the same credentials, or Google if you registered that way. Pa
 | **Settings** | Organization, team members, provider keys, billing, and audit logs. |
 
 ![The Convio dashboard, with the organization switcher at the top of the sidebar and quick stats for conversations, agents, and token spend](https://placehold.co/1280x720)
-
-## Your first agent
-
-1. **Agents → New.** Name it, pick a model, write a system prompt. Everything else can come later.
-2. **Test it in the playground** before anyone else sees it. New agents start as `draft` and do not accept conversations. The playground ignores status, production does not.
-3. **Set the status to `active`** when the answers are good.
-4. **Deploy it to a channel** and confirm the widget answers.
-
-The full walkthrough, including how to pick a model and write a prompt that holds up, is in [AI agents](/docs/agents).
 
 ## Inviting your team
 
@@ -79,9 +76,6 @@ Sign-in activity is about your account. The **Settings → Audit log** page is a
 
 | Term | Meaning |
 |---|---|
-| **Agent** | The brain behind a conversation: a model, a system prompt, and the tools it may call. |
-| **Model** | The engine. Knows how to produce text, nothing about your business. |
-| **Bot** | What a visitor perceives. In Convio a bot is a *deployment* of an agent on a channel, not a separate object. |
 | **Organization** | The workspace boundary. Owns agents, knowledge, widgets, keys, members, and billing. |
 | **Deployment** | A published version of an agent on a channel. Editing the agent does not change what is deployed until you redeploy. |
 | **Widget** | The embeddable web chat client you drop into your site. |
