@@ -6,9 +6,9 @@ import { Switch } from '@/components/ui/switch'
 import { SectionIntro } from './section-intro'
 import { Reveal } from './motion'
 import { Check, Zap, Shield, Star, Crown } from 'lucide-react'
-import { pricingConfig } from '@/lib/pricing/config'
+import { pricingConfig, formatUsd, yearlyAnnualTotal, yearlyDiscountLabel } from '@/lib/pricing/config'
 import type { PlanConfig } from '@/lib/pricing/config'
-import { usePricingPlans } from '@/lib/pricing/use-pricing-config'
+import { usePricingPlanList } from '@/lib/pricing/use-pricing-config'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/lib/hooks/useAuth'
 
@@ -25,7 +25,7 @@ function PlanCard({ plan, isYearly, onAction }: { plan: PlanConfig; isYearly: bo
   const icon = plan.icon ? PLAN_ICONS[plan.icon] : null
   const monthlyPrice = isYearly && plan.yearlyPrice ? plan.yearlyPrice : plan.price
   const period = isYearly && plan.yearlyPrice ? '/month' : plan.period
-  const yearlyTotal = isYearly && plan.yearlyPrice ? parseInt(plan.yearlyPrice.replace('$', '')) * 12 : null
+  const yearlyTotal = isYearly && plan.yearlyPrice ? yearlyAnnualTotal(plan) : null
 
   const cardContent = (
     <div
@@ -73,7 +73,7 @@ function PlanCard({ plan, isYearly, onAction }: { plan: PlanConfig; isYearly: bo
           </div>
           {isYearly && yearlyTotal !== null && (
             <span className="text-[11px] text-muted-foreground mt-1">
-              billed ${yearlyTotal}/year
+              billed {formatUsd(yearlyTotal)}/year
             </span>
           )}
         </div>
@@ -110,8 +110,8 @@ export function Pricing() {
   const [isYearly, setIsYearly] = useState(false)
   const navigate = useNavigate()
   const { data: session } = useSession()
-  const { data: remotePlans } = usePricingPlans()
-  const plans = remotePlans ?? pricingConfig.plans
+  const { plans, isUnavailable } = usePricingPlanList()
+  const discountLabel = yearlyDiscountLabel(plans)
 
   const handlePlanAction = useCallback((plan: PlanConfig) => {
     if (plan.key === 'enterprise') {
@@ -148,20 +148,28 @@ export function Pricing() {
             <span className={cn('text-sm transition-colors', isYearly ? 'text-foreground font-medium' : 'text-muted-foreground')}>
               Yearly
             </span>
-            <Badge className="bg-success/15 text-success border border-success/30 text-[10px] px-1.5 py-0 h-4 font-medium">
-              Save 20%
-            </Badge>
+            {discountLabel && (
+              <Badge className="bg-success/15 text-success border border-success/30 text-[10px] px-1.5 py-0 h-4 font-medium">
+                {discountLabel}
+              </Badge>
+            )}
           </div>
         </Reveal>
 
         {/* Plan Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 items-stretch mt-10">
-          {plans.map((plan, i) => (
-                <Reveal key={plan.name} delay={i * 0.06} className="h-full">
-                  <PlanCard plan={plan} isYearly={isYearly} onAction={handlePlanAction} />
-                </Reveal>
-          ))}
-        </div>
+        {isUnavailable ? (
+          <p className="mt-10 text-center text-sm text-muted-foreground">
+            Pricing is temporarily unavailable. Please try again in a moment.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 items-stretch mt-10">
+            {plans.map((plan, i) => (
+              <Reveal key={plan.name} delay={i * 0.06} className="h-full">
+                <PlanCard plan={plan} isYearly={isYearly} onAction={handlePlanAction} />
+              </Reveal>
+            ))}
+          </div>
+        )}
 
         {/* View All Plans CTA */}
         <Reveal>

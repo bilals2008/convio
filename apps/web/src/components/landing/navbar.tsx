@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Menu, X, LogOut, LayoutDashboard, User, Sun, Moon } from 'lucide-react'
+import { Menu, X, LogOut, LayoutDashboard, User } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth-context'
-import { useTheme } from 'next-themes'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { DirectionHover } from './direction-hover'
 import {
   DropdownMenu,
@@ -24,7 +24,6 @@ const navLinks: { label: string; href: string; badge?: string }[] = [
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const { theme, setTheme } = useTheme()
   const { user, isAuthenticated, isLoading, logout } = useAuth()
   const { pathname } = useLocation()
 
@@ -90,24 +89,7 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="relative grid h-8 w-8 place-items-center rounded-full border border-border bg-card/60 transition-colors hover:bg-card active:scale-[0.96] cursor-pointer before:absolute before:-inset-1 before:content-['']"
-              aria-label="Toggle theme"
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={theme === 'dark' ? 'sun' : 'moon'}
-                  initial={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, scale: 0.25, filter: 'blur(4px)' }}
-                  transition={{ type: 'spring', duration: 0.3, bounce: 0 }}
-                  className="absolute grid place-items-center"
-                >
-                  {theme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-                </motion.span>
-              </AnimatePresence>
-            </button>
+            <ThemeToggle />
 
             {!isLoading && isAuthenticated ? (
                 <DropdownMenu>

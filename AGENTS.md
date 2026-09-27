@@ -67,6 +67,7 @@ Prefer official documentation over random tutorials.
 - Config: `prisma.config.ts` at project root
 - Client is lazy-initialized via Proxy in `packages/database/src/index.ts`
 - Run `pnpm exec prisma generate` after schema changes
+- Run this for mgiration if other one fialed `pnpm exec prisma migrate deploy`
 
 ## Code Quality
 
@@ -101,4 +102,7 @@ Prefer official documentation over random tutorials.
 - All AI providers accept optional `apiKey` in `GenerateParams`
 - Backend routes: `GET/POST/PATCH/DELETE /organizations/:orgId/provider-keys`
 - Models endpoint includes user-configured providers
+
+
+
 

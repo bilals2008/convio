@@ -11,6 +11,7 @@ import { PasswordChangeCard } from '@/components/settings/password-change-card'
 import { PasskeysCard } from '@/components/settings/passkeys-card'
 import { DangerZoneCard } from '@/components/settings/danger-zone-card'
 import { AiGenerationModelCard } from '@/components/settings/ai-generation-model-card'
+import { EmbeddingSettingsCard } from '@/components/settings/embedding-settings-card'
 import {
   ProfileFormProvider,
   useCreateProfileForm,
@@ -64,6 +65,7 @@ export default function ProfilePage() {
         <ProfileInformationCard profile={profile} user={user} />
         <AccountOverviewCard />
         <AiGenerationModelCard />
+        <EmbeddingSettingsCard />
         <PasswordChangeCard />
         <PasskeysCard />
         <LoginActivityTable />

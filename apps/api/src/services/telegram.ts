@@ -1,6 +1,7 @@
 import { prisma } from '@convio/database'
 import { chatWithAgent } from '../modules/ai/routes.js'
 import { formatResponse } from './formatters/index.js'
+import { overMessageLimit, MESSAGE_LIMIT_NOTICE } from './billing.js'
 
 const TELEGRAM_API = 'https://api.telegram.org'
 
@@ -340,9 +341,15 @@ export async function processTelegramUpdate(
       })
     }
 
+    if (await overMessageLimit(deployment.agent.organizationId)) {
+      await sendTelegramMessage(botToken, chatId, MESSAGE_LIMIT_NOTICE)
+      return { response: MESSAGE_LIMIT_NOTICE }
+    }
+
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'user',
         content: text,
         metadata: { chatId, chatType, ...(isGroup ? { groupTitle: message.chat.title } : {}) },
@@ -365,6 +372,7 @@ export async function processTelegramUpdate(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'assistant',
         content: reply,
       },

@@ -1,3 +1,4 @@
+import { apiErrorMessage, isPlanLimitError } from '@/lib/api/errors'
 import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2, Building2, ArrowLeft } from 'lucide-react'
@@ -59,11 +60,12 @@ export function OrgCreationDialog({ open, onOpenChange }: OrgCreationDialogProps
       onOpenChange(false)
     },
     onError: (error) => {
-      const data = (error as any)?.response?.data
-      if (data?.error === 'PLAN_LIMIT_EXCEEDED') {
+      // The server sends { success, message, code }; there is no `error` field, so the old
+      // `data?.error` check never matched and the upgrade prompt never appeared.
+      if (isPlanLimitError(error)) {
         setShowUpgrade(true)
       } else {
-        toast.error(error.message || 'Failed to create organization')
+        toast.error(apiErrorMessage(error, 'Failed to create organization'))
       }
     },
   })

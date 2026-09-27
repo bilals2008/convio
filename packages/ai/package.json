@@ -31,5 +31,8 @@
     "@huggingface/transformers": "^3.8.1",
     "ai": "^7.0.0",
     "llm-prices": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0"
   }
 }

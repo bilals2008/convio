@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 // ─── Shared base styles ────────────────────────────────────────────────────────
 const cardBase =
@@ -83,7 +82,6 @@ export function KPICard({
   change,
   period = 'vs last period',
 }: KPICardProps) {
-  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
   const trendColor =
     trend === 'up'
       ? 'text-emerald-500'
@@ -103,8 +101,7 @@ export function KPICard({
         {(change || period) && (
           <span className="mt-0.5 flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs">
             {change && (
-              <span className={cn('inline-flex items-center gap-0.5 font-medium', trendColor)}>
-                <TrendIcon className="size-2.5 sm:size-3" />
+              <span className={cn('font-medium', trendColor)}>
                 {change}
               </span>
             )}

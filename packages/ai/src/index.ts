@@ -4,8 +4,7 @@ export interface AIProvider {
   name: string
   generate(params: GenerateParams): Promise<GenerateResult>
   stream(params: GenerateParams): AsyncIterable<StreamChunk>
-  generateImage?(params: ImageGenerateParams): Promise<ImageGenerateResult>
-  embed(text: string): Promise<number[]>
+  embed(text: string, options?: EmbedOptions): Promise<number[]>
   moderate(text: string): Promise<ModerationResult>
   listModels(apiKey?: string): Promise<Model[]>
 }
@@ -32,6 +31,18 @@ export interface Tool {
   name: string
   description: string
   parameters: Record<string, unknown>
+}
+
+export interface EmbedOptions {
+  /** Optional BYOK key; providers fall back to their env key when omitted. */
+  apiKey?: string
+  /** Optional model override for embedding, e.g. 'text-embedding-3-small'. */
+  model?: string
+  /**
+   * Whether this is a search query or stored content. Some model families
+   * (bge, e5) require an instruction prefix on one side for best retrieval.
+   */
+  task?: 'query' | 'document'
 }
 
 export interface GenerateResult {
@@ -72,23 +83,6 @@ export interface Model {
 export interface ModerationResult {
   flagged: boolean
   categories: Record<string, boolean>
-}
-
-// Image generation types
-export interface ImageGenerateParams {
-  model: string
-  prompt: string
-  size: string
-  images?: string[]
-  responseFormat?: 'url' | 'b64_json'
-  apiKey?: string
-  signal?: AbortSignal
-}
-
-export interface ImageGenerateResult {
-  url?: string
-  b64Json?: string
-  revisedPrompt?: string
 }
 
 // Provider registry

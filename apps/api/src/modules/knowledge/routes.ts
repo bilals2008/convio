@@ -11,6 +11,7 @@ import { writeFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { resolveGenerationProvider } from '../agents/agent-generator.js'
+import { checkKnowledgeBaseLimit } from '../../services/billing.js'
 import { KB_GENERATION_PROMPT, parseKbDraft } from './kb-generator.js'
 import { getOrCreateQaDocument, syncQaChunk, deleteQaChunk, getQaOrThrow } from './qa-service.js'
 
@@ -128,6 +129,7 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
     preHandler: [
       fastify.authenticate,
       fastify.requireMembership,
+      fastify.checkKnowledgeBaseLimit,
       validate({ params: orgParamsSchema, body: createKbBodySchema }),
     ],
   }, async (request) => {
@@ -146,6 +148,7 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
     preHandler: [
       fastify.authenticate,
       fastify.requireMembership,
+      fastify.checkKnowledgeBaseLimit,
       validate({ params: orgParamsSchema, body: generateKbBodySchema }),
     ],
   }, async (request) => {
@@ -356,6 +359,17 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
     if (!kb) throw new AppError(404, 'Knowledge base not found')
 
     await fastify.ensureAdmin(request.userId!, kb.organizationId)
+
+    // A clone is a new knowledge base, so it counts against the same limit. The org comes
+    // from the loaded KB rather than a param, so the check is inline here.
+    const kbLimit = await checkKnowledgeBaseLimit(kb.organizationId)
+    if (!kbLimit.allowed) {
+      throw new AppError(
+        402,
+        `Knowledge base limit (${kbLimit.limit}) reached. You have ${kbLimit.current}. Upgrade your plan to create more.`,
+        'PLAN_LIMIT_EXCEEDED',
+      )
+    }
 
     const copy = await prisma.knowledgeBase.create({
       data: {
@@ -697,12 +711,13 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
       return { data: [] }
     }
 
-    const embedding = await embedText(q)
+    const embedding = await embedText(q, kb.organizationId)
     if (!embedding) {
-      throw new AppError(503, 'Embedding provider unavailable — set OPENAI_API_KEY (or wait for the local model to load) and re-index documents')
+      throw new AppError(503, 'Embedding provider unavailable — check the workspace embedding settings and re-index documents')
     }
 
     const vectorStr = `[${embedding.join(',')}]`
+    // Same calibrated cutoffs as retrieveContext — see processor.ts MAX_DISTANCE.
     const candidates = useRerank === 'true' ? 20 : topK
     const maxDist = useRerank === 'true' ? 0.85 : 0.75
 

@@ -1,3 +1,4 @@
+import { toastMutationError } from '@/lib/api/mutation-error'
 import { useEffect } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -488,7 +489,7 @@ export function useAdminUpdateTicket(ticketId: string) {
       queryClient.invalidateQueries({ queryKey: adminTicketKeys.detail(ticketId) })
       broadcastTicketEvent(ticketId, 'changed')
     },
-    onError: () => toast.error('Failed to update ticket'),
+    onError: (error) => toastMutationError(error, 'Failed to update ticket'),
   })
 }
 
@@ -501,7 +502,7 @@ export function useAdminDeleteTicket(onSuccess?: () => void) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'tickets', 'stats'] })
       onSuccess?.()
     },
-    onError: () => toast.error('Failed to delete ticket'),
+    onError: (error) => toastMutationError(error, 'Failed to delete ticket'),
   })
 }
 
@@ -514,7 +515,7 @@ export function useAdminRestoreTicket(onSuccess?: () => void) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'tickets', 'stats'] })
       onSuccess?.()
     },
-    onError: () => toast.error('Failed to restore ticket'),
+    onError: (error) => toastMutationError(error, 'Failed to restore ticket'),
   })
 }
 
@@ -527,6 +528,6 @@ export function useAdminBulkTickets(onSuccess?: () => void) {
       queryClient.invalidateQueries({ queryKey: ['admin', 'tickets', 'stats'] })
       onSuccess?.()
     },
-    onError: () => toast.error('Failed to apply bulk action'),
+    onError: (error) => toastMutationError(error, 'Failed to apply bulk action'),
   })
 }

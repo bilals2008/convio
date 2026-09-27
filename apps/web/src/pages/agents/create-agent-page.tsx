@@ -1,3 +1,4 @@
+import { toastMutationError } from '@/lib/api/mutation-error'
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -190,16 +191,10 @@ export default function CreateAgentPage() {
       toast.success('Agent created')
       navigate('/agents')
     },
-    onError: (error: { response?: { status?: number }; message?: string }) => {
-      const status = error?.response?.status
-      if (status === 402) {
-        toast.error('You have reached your plan limit. Upgrade to create more agents.', {
-          action: { label: 'Upgrade', onClick: () => navigate('/settings/billing') },
-          duration: 8000,
-        })
-      } else {
-        toast.error(error?.message || 'Unable to create agent. Please try again.')
-      }
+    onError: (error) => {
+      // The server's message names the actual limit and current usage, so show that
+      // instead of a generic "you hit your limit".
+      toastMutationError(error, 'Unable to create agent. Please try again.', () => navigate('/settings/billing'))
     },
   })
 

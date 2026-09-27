@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { prisma } from '@convio/database'
 import type { Prisma } from '@convio/database'
 import { PLANS } from '@convio/config'
@@ -29,8 +29,12 @@ import {
   revenueQuerySchema,
 } from './admin-schema.js'
 import { creemMode, isCreemConfigured, creemProducts, type CreemProduct, type CreemProductInput } from '../../services/creem.js'
+import { mergeLimits, planAmounts, planDisplayPricing, withDerivedPricing } from '../../services/plans.js'
 
 const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, business: 2, enterprise: 3 }
+
+// A create has no saved row to fall back on, so every amount starts empty.
+const EMPTY_PLAN_AMOUNTS = { priceMonthly: null, priceYearly: null, yearlyDiscountPercent: null }
 
 type RevenuePeriod = 'weekly' | 'monthly' | 'yearly'
 
@@ -1419,9 +1423,16 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   })
 
   // GET /api/admin/plans — List all pricing plans
+  // The display price is derived here too, so the list shows the same figure the pricing
+  // page will, even for a plan row last saved before the amounts became the single source.
   fastify.get('/admin/plans', adminGuard, async () => {
     const plans = await prisma.plan.findMany({ orderBy: { sortOrder: 'asc' } })
-    return { data: plans }
+    return {
+      data: plans.map((p) => ({
+        ...p,
+        ...planDisplayPricing({ priceMonthly: p.priceMonthly, priceYearly: p.priceYearly }),
+      })),
+    }
   })
 
   // POST /api/admin/plans — Create a plan
@@ -1429,18 +1440,34 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.authenticateSensitive, fastify.ensurePlatformAdmin, validate({ body: planCreateSchema })],
   }, async (request) => {
     const body = request.body as Record<string, unknown>
-    const plan = await prisma.plan.create({ data: body as any })
+    // Only the amounts are accepted from the client; the display price is derived.
+    const data = withDerivedPricing({ ...body }, planAmounts(EMPTY_PLAN_AMOUNTS, body))
+    const plan = await prisma.plan.create({ data: data as any })
     return { data: plan }
   })
 
   // PATCH /api/admin/plans/:id — Update a plan
+  // Linked Creem products are re-synced as part of the save, so the price on the pricing
+  // page and the amount Creem charges at checkout can never drift apart.
   fastify.patch('/admin/plans/:id', {
     preHandler: [fastify.authenticateSensitive, fastify.ensurePlatformAdmin, validate({ body: planUpdateSchema, params: orgParamsSchema })],
   }, async (request) => {
     const { id } = request.params as { id: string }
     const body = request.body as Record<string, unknown>
-    const plan = await prisma.plan.update({ where: { id }, data: body as any })
-    return { data: plan }
+
+    const before = await prisma.plan.findUnique({ where: { id } })
+    if (!before) throw new AppError(404, 'Plan not found', 'NOT_FOUND')
+
+    // Amounts and limits are resolved against the saved row, so patching one field (say
+    // `active`) cannot wipe the yearly pricing or the limits derived from the others.
+    const limits = mergeLimits(before.limits, body.limits)
+    const data = withDerivedPricing({ ...body, ...(limits ? { limits } : {}) }, planAmounts(before, body))
+
+    const plan = await prisma.plan.update({ where: { id }, data: data as any })
+
+    // Creem failures are returned rather than thrown: the save is already committed.
+    const creemSync = creemFieldsChanged(before, plan) ? await syncPlanProducts(request, plan) : []
+    return { data: plan, creemSync }
   })
 
   // DELETE /api/admin/plans/:id — Delete a plan
@@ -1547,6 +1574,63 @@ export default async function adminRoutes(fastify: FastifyInstance) {
       mode: product.mode,
       trialPeriodDays: product.trial_period_days ?? null,
     }
+  }
+
+  type CreemSyncOutcome = { period: CreemPeriod; status: 'synced' | 'skipped' | 'failed'; message?: string }
+
+  // Cosmetic edits (features, badge, sort order) stay local — only fields Creem stores
+  // justify an API call.
+  function creemFieldsChanged(before: LinkablePlan, after: LinkablePlan): boolean {
+    return (
+      before.name !== after.name ||
+      (before.description ?? '') !== (after.description ?? '') ||
+      before.priceMonthly !== after.priceMonthly ||
+      before.priceYearly !== after.priceYearly ||
+      before.trialPeriodDays !== after.trialPeriodDays
+    )
+  }
+
+  // Pushes the saved plan onto every linked Creem product. Failures and unusable amounts
+  // are reported per period, because a stale checkout price is worse than a noisy toast.
+  async function syncPlanProducts(
+    request: FastifyRequest,
+    plan: LinkablePlan & { id: string; key: string },
+  ): Promise<CreemSyncOutcome[]> {
+    if (!isCreemConfigured()) return []
+
+    const outcomes = await Promise.all(
+      (['monthly', 'yearly'] as CreemPeriod[]).map(async (period): Promise<CreemSyncOutcome | null> => {
+        const productId = effectiveProductId(plan, period).id
+        if (!productId) return null
+
+        const cents = planAmountCents(plan, period)
+        if (!amountIsUsable(cents)) {
+          return { period, status: 'skipped', message: 'set a numeric amount of at least $1' }
+        }
+
+        try {
+          const { tax_category: _createOnly, ...updateFields } = creemProductFields(plan, period)
+          const product = await creemProducts.update(productId, { ...updateFields, price: cents })
+          request.log.info(
+            { actorId: request.userId, planId: plan.id, period, productId, mode: product.mode },
+            'Creem product synced on plan save',
+          )
+          return { period, status: 'synced' }
+        } catch (error) {
+          request.log.error(
+            { actorId: request.userId, planId: plan.id, period, productId, err: error },
+            'Creem sync on plan save failed',
+          )
+          return {
+            period,
+            status: 'failed',
+            message: error instanceof AppError ? error.message : 'Creem did not accept the update',
+          }
+        }
+      }),
+    )
+
+    return outcomes.filter((outcome): outcome is CreemSyncOutcome => outcome !== null)
   }
 
   function comparePlanToProduct(plan: LinkablePlan, period: CreemPeriod, product: CreemProduct): string[] {

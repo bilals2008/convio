@@ -19,6 +19,7 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronDown,
+  Loader2,
 } from 'lucide-react'
 import { FileIcon } from '@/components/shared/file-icon'
 import { Button } from '@/components/ui/button'
@@ -75,6 +76,7 @@ interface KbSourcesProps {
   onDelete: (id: string) => void
   onReprocess: (id: string) => void
   reprocessingId: string | null
+  deletingId: string | null
   onBulkDelete: () => void
   onBulkReprocess: () => void
   onUploadFiles: (files: File[]) => void
@@ -157,6 +159,7 @@ export function KbSources({
   onDelete,
   onReprocess,
   reprocessingId,
+  deletingId,
   onBulkDelete,
   onBulkReprocess,
   onUploadFiles,
@@ -233,7 +236,7 @@ export function KbSources({
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/60">
             <DocIcon type={row.original.type} size={16} />
           </span>
-          <p className="text-sm font-medium truncate text-foreground">{row.original.name}</p>
+          <p className={cn('text-sm font-medium truncate text-foreground', deletingId === row.original.id && 'opacity-50')}>{row.original.name}</p>
         </div>
       ),
       sortingFn: 'text',
@@ -296,7 +299,7 @@ export function KbSources({
       size: 96,
       cell: ({ row }) => {
         const doc = row.original
-        const isBusy = doc.status === 'processing' || reprocessingId === doc.id
+        const isBusy = doc.status === 'processing' || reprocessingId === doc.id || deletingId === doc.id
         return (
           <div className="flex items-center gap-0.5">
             <button
@@ -320,16 +323,17 @@ export function KbSources({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onDelete(doc.id) }}
+              disabled={deletingId === doc.id}
               title="Delete"
-              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
             >
-              <Trash2 className="size-3.5" />
+              {deletingId === doc.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
             </button>
           </div>
         )
       },
     }),
-  ], [selected, selectionMode, filtered, toggleSelect, setSelectionMode, onPreview, onReprocess, onDelete, reprocessingId])
+  ], [selected, selectionMode, filtered, toggleSelect, setSelectionMode, onPreview, onReprocess, onDelete, reprocessingId, deletingId])
 
   const table = useReactTable({
     data: filtered,
@@ -472,9 +476,8 @@ export function KbSources({
           </div>
         )
       ) : view === 'grid' ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((doc) => {
-        const isBusy = doc.status === 'processing' || reprocessingId === doc.id
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">          {filtered.map((doc) => {
+        const isBusy = doc.status === 'processing' || reprocessingId === doc.id || deletingId === doc.id
             return (
               <div
                 key={doc.id}
@@ -482,8 +485,9 @@ export function KbSources({
                   'group relative flex flex-col rounded-xl border border-border/60 bg-card p-4 transition-colors hover:border-border',
                   selected.has(doc.id) && 'border-primary/50 bg-primary/5',
                   doc.status === 'error' && 'border-destructive/30',
-                )}
-              >
+                  deletingId === doc.id && 'pointer-events-none opacity-50',
+                )
+              }>
                 {selected.has(doc.id) && (
                   <div className="absolute right-3 top-3" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
@@ -535,10 +539,11 @@ export function KbSources({
                     <button
                       type="button"
                       onClick={() => onDelete(doc.id)}
+                      disabled={deletingId === doc.id}
                       title="Delete"
-                      className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
                     >
-                      <Trash2 className="size-3.5" />
+                      {deletingId === doc.id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
                     </button>
                   </div>
                 </div>

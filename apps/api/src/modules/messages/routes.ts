@@ -109,16 +109,23 @@ function formatWidgetQuestions(args: Record<string, unknown>): string {
 }
 
 async function getConversationOrgId(conversationId: string): Promise<string> {
+  const { organizationId } = await getConversationOrgAndAgent(conversationId)
+  return organizationId
+}
+
+// agentId is returned so message writes can denormalize it onto Message rows —
+// analytics aggregates filter Message by agentId directly.
+async function getConversationOrgAndAgent(conversationId: string): Promise<{ organizationId: string; agentId: string }> {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    include: { agent: { select: { organizationId: true } } },
+    select: { agent: { select: { organizationId: true, id: true } } },
   })
 
   if (!conversation) {
     throw new AppError(404, 'Conversation not found')
   }
 
-  return conversation.agent.organizationId
+  return { organizationId: conversation.agent.organizationId, agentId: conversation.agent.id }
 }
 
 type ToolHandler = Awaited<ReturnType<typeof loadAgentToolHandlers>>[number]
@@ -137,7 +144,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
       role: 'user' | 'assistant'; content: string; responseTimeMs?: number; inputTokens?: number; outputTokens?: number
     }
 
-    const orgId = await getConversationOrgId(id)
+    const { organizationId: orgId, agentId: conversationAgentId } = await getConversationOrgAndAgent(id)
     await fastify.getMembership(request.userId!, orgId)
 
     const limitCheck = await checkMessageLimit(orgId)
@@ -151,6 +158,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
     const message = await prisma.message.create({
       data: {
         conversationId: id,
+        agentId: conversationAgentId,
         role,
         content,
         status: 'sent',
@@ -447,6 +455,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
       await prisma.message.create({
         data: {
           conversationId: id,
+          agentId: agent.id,
           role: 'assistant',
           content: fullResponse,
           status: 'sent',
@@ -620,7 +629,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
       return { data: { response: widgetGuardrailRefusal } }
     }
 
-    await prisma.message.create({ data: { conversationId: id, role: 'user', content, status: 'sent' } })
+    await prisma.message.create({ data: { conversationId: id, agentId: conversation.agent.id, role: 'user', content, status: 'sent' } })
     await prisma.conversation.update({ where: { id }, data: { status: 'active' } })
 
     const agent = conversation.agent
@@ -689,6 +698,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
       await prisma.message.create({
         data: {
           conversationId: id,
+          agentId: agent.id,
           role: 'assistant',
           content: response.content,
           status: 'sent',
@@ -798,7 +808,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
     } else if (guardrailInputRefusal(content, agent.guardrails)) {
       earlyResponse = guardrailInputRefusal(content, agent.guardrails)
     } else if (!earlyResponse) {
-      await prisma.message.create({ data: { conversationId: id, role: 'user', content, status: 'sent' } })
+      await prisma.message.create({ data: { conversationId: id, agentId: agent.id, role: 'user', content, status: 'sent' } })
       await prisma.conversation.update({ where: { id }, data: { status: 'active' } })
     }
 
@@ -845,14 +855,17 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
           ? ((agent.widgetConfig as Record<string, unknown>).composioToolkits as string[])
           : []
         if (agentComposioToolkits.length > 0) {
-          // Plan gate: Composio toolkits are a Pro feature.
           let planName: string | null = null
           try {
             planName = (await getOrgPlan(agent.organizationId)).name
           } catch {
             planName = null
           }
-          if (planName === 'pro' || planName === 'business' || planName === 'enterprise') {
+          // Plan gate: Composio toolkits are a paid feature. Deny-list rather than
+          // allow-list, to match the other three gates — an allow-list silently denied
+          // every plan key an admin created in the pricing UI. getOrgPlan reports 'free'
+          // for a key with no plan row, so a dangling key is denied everywhere.
+          if (planName !== null && planName !== 'free') {
             const result = await loadComposioToolHandlers({
               orgId: agent.organizationId,
               requestedToolkits: agentComposioToolkits,
@@ -1044,6 +1057,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
       await prisma.message.create({
         data: {
           conversationId: id,
+          agentId: agent.id,
           role: 'assistant',
           content: fullResponse,
           status: 'sent',
@@ -1106,6 +1120,13 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
     }
     assertConversationAccess(request, widgetDomains, conversation)
 
+    // This route persists the answers turn plus the assistant reply, so it has to be
+    // metered like every other widget path.
+    const resumeLimitCheck = await checkMessageLimit(conversation.agent.organizationId)
+    if (!resumeLimitCheck.allowed) {
+      return { data: { response: 'This conversation has reached its monthly message limit.' } }
+    }
+
     const agent = conversation.agent
     const answersText = answers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n')
 
@@ -1167,7 +1188,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
 
       try {
         // Persist the answers as the user turn so history stays coherent.
-        await prisma.message.create({ data: { conversationId: id, role: 'user', content: answersText, status: 'sent' } })
+        await prisma.message.create({ data: { conversationId: id, agentId: agent.id, role: 'user', content: answersText, status: 'sent' } })
         await prisma.conversation.update({ where: { id }, data: { status: 'active' } })
 
         const historyPromise = prisma.message.findMany({
@@ -1241,6 +1262,7 @@ export default async function messagesRoutes(fastify: FastifyInstance) {
         await prisma.message.create({
           data: {
             conversationId: id,
+            agentId: agent.id,
             role: 'assistant',
             content: fullResponse,
             status: 'sent',

@@ -128,6 +128,8 @@ export default async function organizationsRoutes(fastify: FastifyInstance) {
     if (body.slug !== undefined) data.slug = body.slug
     if (body.logo !== undefined) data.logo = body.logo
     if (body.aiGenerationModel !== undefined) data.aiGenerationModel = body.aiGenerationModel
+    if (body.embeddingProvider !== undefined) data.embeddingProvider = body.embeddingProvider
+    if (body.embeddingModel !== undefined) data.embeddingModel = body.embeddingModel
     // ponytail: plan is billing-owned — changes go through the billing module only
 
     const org = await prisma.organization.update({

@@ -34,6 +34,7 @@ import {
 import { knowledge as knowledgeApi } from '@/lib/api'
 import type { SourceType } from '@/components/knowledge/source-picker-modal'
 import { useOrg } from '@/lib/org-context'
+import { organizations as orgsApi } from '@/lib/api'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -66,6 +67,7 @@ interface DocItem {
   status: 'pending' | 'processing' | 'ready' | 'error' | 'archived'
   chunkCount?: number
   createdAt: string
+  embeddedWith?: string | null
 }
 
 export default function KnowledgeDetailPage() {
@@ -85,6 +87,7 @@ export default function KnowledgeDetailPage() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [reprocessingId, setReprocessingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -113,6 +116,21 @@ export default function KnowledgeDetailPage() {
       return res.data.data as RawKnowledgeBase
     },
     enabled: isEdit,
+  })
+
+  // The workspace's real embedding config drives the Summary panel — the local
+  // KbSettings constant only holds chunking/retrieval defaults.
+  const { data: embeddingInfo } = useQuery({
+    queryKey: ['organization', orgId],
+    queryFn: async () => {
+      const res = await orgsApi.get(orgId!)
+      const org = res.data.data as { embeddingProvider?: string; embeddingModel?: string | null }
+      return {
+        provider: org.embeddingProvider === 'openai' ? 'openai' : 'local',
+        model: org.embeddingModel ?? (org.embeddingProvider === 'openai' ? 'text-embedding-3-small' : 'all-MiniLM-L6-v2'),
+      }
+    },
+    enabled: isEdit && !!orgId,
   })
 
   const docsQuery = useInfiniteQuery({
@@ -165,7 +183,7 @@ export default function KnowledgeDetailPage() {
         organizationId: orgId ?? '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        settings,
+        settings: { ...settings, embeddingModel: embeddingInfo?.model ?? settings.embeddingModel },
       }
     }
     if (!kb) return null
@@ -189,9 +207,9 @@ export default function KnowledgeDetailPage() {
       createdAt: kb.createdAt,
       updatedAt: kb.updatedAt,
       lastIndexedAt: kb.lastIndexedAt,
-      settings,
+      settings: { ...settings, embeddingModel: embeddingInfo?.model ?? settings.embeddingModel },
     }
-  }, [kb, documents, form, settings, isCreate, orgId])
+  }, [kb, documents, form, settings, isCreate, orgId, embeddingInfo])
 
   const health = useMemo(
     () => computeHealth(documents, settings, analytics.searches > 0 ? analytics.success / analytics.searches : null),
@@ -311,6 +329,8 @@ export default function KnowledgeDetailPage() {
   }, [isCreate, kb, form])
 
   const handleDeleteDocument = async (docId: string) => {
+    if (deletingId) return // one delete at a time; the row shows its own spinner
+    setDeletingId(docId)
     try {
       await knowledgeApi.deleteDocument(docId)
       queryClient.invalidateQueries({ queryKey: ['knowledge-base-documents', id] })
@@ -318,6 +338,8 @@ export default function KnowledgeDetailPage() {
       toast.success('Document deleted')
     } catch {
       toast.error('Failed to delete document')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -448,9 +470,20 @@ export default function KnowledgeDetailPage() {
 
   const handleBulkDelete = async () => {
     const ids = Array.from(selected)
-    for (const docId of ids) await handleDeleteDocument(docId)
+    for (const docId of ids) {
+      setDeletingId(docId)
+      try {
+        await knowledgeApi.deleteDocument(docId)
+        queryClient.invalidateQueries({ queryKey: ['knowledge-base-documents', id] })
+      } catch {
+        toast.error(`Failed to delete document`)
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['knowledge-base', id] })
     setSelected(new Set())
     setSelectionMode(false)
+    setDeletingId(null)
+    if (ids.length > 0) toast.success(`${ids.length} document${ids.length !== 1 ? 's' : ''} deleted`)
   }
 
   const handleBulkReprocess = async () => {
@@ -622,6 +655,7 @@ export default function KnowledgeDetailPage() {
                 onDelete={handleDeleteDocument}
                 onReprocess={handleReprocess}
                 reprocessingId={reprocessingId}
+                deletingId={deletingId}
                 onBulkDelete={handleBulkDelete}
                 onBulkReprocess={handleBulkReprocess}
                 onUploadFiles={handleUploadFiles}
@@ -676,6 +710,17 @@ export default function KnowledgeDetailPage() {
                 ? `${viewDoc.chunkCount} chunk${viewDoc.chunkCount !== 1 ? 's' : ''} indexed`
                 : 'Document preview'}
             </DialogDescription>
+            {viewDoc && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-medium text-muted-foreground">Embedding model</span>
+                <span
+                  className="rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono"
+                  title={viewDoc.embeddedWith ?? undefined}
+                >
+                  {viewDoc.embeddedWith ?? 'Not stamped — re-index to update'}
+                </span>
+              </div>
+            )}
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden px-6 py-4">

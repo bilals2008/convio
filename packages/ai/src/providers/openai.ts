@@ -1,8 +1,13 @@
 import { generateText, streamText, embed, jsonSchema } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
-import type { AIProvider, GenerateParams, GenerateResult, StreamChunk, Model, ModerationResult } from '../index.js'
+import type { AIProvider, EmbedOptions, GenerateParams, GenerateResult, StreamChunk, Model, ModerationResult } from '../index.js'
 import { toProviderError } from './errors.js'
 import { fetchOpenAICompatibleModels, getCachedModels, modelCacheKey } from './model-cache.js'
+
+// DocumentChunk.embedding is vector(384). text-embedding-3-small defaults to 1536
+// dims, which fails the pgvector insert — ask for 384 explicitly instead.
+const EMBEDDING_DIMENSIONS = 384
+const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small'
 
 export class OpenAIProvider implements AIProvider {
   id = 'openai'
@@ -88,11 +93,12 @@ export class OpenAIProvider implements AIProvider {
     }
   }
 
-  async embed(text: string): Promise<number[]> {
+  async embed(text: string, options?: EmbedOptions): Promise<number[]> {
     try {
       const result = await embed({
-        model: this.getClient().textEmbeddingModel('text-embedding-3-small'),
+        model: this.getClient(options?.apiKey).embedding(options?.model ?? DEFAULT_EMBEDDING_MODEL),
         value: text,
+        providerOptions: { openai: { dimensions: EMBEDDING_DIMENSIONS } },
       })
       return result.embedding
     } catch (error) {

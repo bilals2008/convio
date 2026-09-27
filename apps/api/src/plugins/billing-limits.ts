@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin'
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { checkAgentLimit, checkMessageLimit, checkOrgLimit } from '../services/billing.js'
+import { checkAgentLimit, checkKnowledgeBaseLimit, checkMessageLimit, checkOrgLimit } from '../services/billing.js'
 import { AppError } from './error.js'
 
 declare module 'fastify' {
@@ -8,17 +8,23 @@ declare module 'fastify' {
     checkAgentLimit: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
     checkMessageLimit: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
     checkOrgLimit: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
+    checkKnowledgeBaseLimit: (request: FastifyRequest, reply: FastifyReply) => Promise<void>
   }
+}
+
+// Every limited collection is created through an org-scoped route, so the limit always
+// applies to the org the caller proved membership of.
+function orgIdFrom(request: FastifyRequest): string {
+  const { orgId } = request.params as { orgId?: string }
+  if (!orgId) {
+    throw new AppError(400, 'Missing organization ID', 'BAD_REQUEST')
+  }
+  return orgId
 }
 
 export default fp(async function billingLimitsPlugin(fastify: FastifyInstance) {
   fastify.decorate('checkAgentLimit', async (request: FastifyRequest, _reply: FastifyReply) => {
-    const { orgId } = request.params as { orgId?: string }
-    if (!orgId) {
-      throw new AppError(400, 'Missing organization ID', 'BAD_REQUEST')
-    }
-
-    const { allowed, current, limit } = await checkAgentLimit(orgId)
+    const { allowed, current, limit } = await checkAgentLimit(orgIdFrom(request))
     if (!allowed) {
       throw new AppError(
         402,
@@ -29,16 +35,22 @@ export default fp(async function billingLimitsPlugin(fastify: FastifyInstance) {
   })
 
   fastify.decorate('checkMessageLimit', async (request: FastifyRequest, _reply: FastifyReply) => {
-    const { orgId } = request.params as { orgId?: string }
-    if (!orgId) {
-      throw new AppError(400, 'Missing organization ID', 'BAD_REQUEST')
-    }
-
-    const { allowed, current, limit } = await checkMessageLimit(orgId)
+    const { allowed, current, limit } = await checkMessageLimit(orgIdFrom(request))
     if (!allowed) {
       throw new AppError(
         402,
         `Monthly message limit (${limit.toLocaleString()}) reached. You've used ${current.toLocaleString()} messages this month. Upgrade your plan to continue.`,
+        'PLAN_LIMIT_EXCEEDED',
+      )
+    }
+  })
+
+  fastify.decorate('checkKnowledgeBaseLimit', async (request: FastifyRequest, _reply: FastifyReply) => {
+    const { allowed, current, limit } = await checkKnowledgeBaseLimit(orgIdFrom(request))
+    if (!allowed) {
+      throw new AppError(
+        402,
+        `Knowledge base limit (${limit}) reached. You have ${current}. Upgrade your plan to create more.`,
         'PLAN_LIMIT_EXCEEDED',
       )
     }

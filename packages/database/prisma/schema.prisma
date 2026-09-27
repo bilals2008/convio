@@ -43,6 +43,10 @@ model Organization {
   logo                    String?
   plan                    String                   @default("free")
   aiGenerationModel       String?
+  // Embedding backend for knowledge-base ingestion/retrieval: 'local' uses the
+  // bundled all-MiniLM-L6-v2 model; 'openai' uses the org's OpenAI provider key.
+  embeddingProvider       String                   @default("local")
+  embeddingModel          String?
   createdAt               DateTime                 @default(now()) @db.Timestamptz(6)
   updatedAt               DateTime                 @updatedAt @db.Timestamptz(6)
   agents                  Agent[]
@@ -122,6 +126,7 @@ model Agent {
   deployments     Deployment[]
   widgets         Widget[]
   broadcasts      Broadcast[]
+  messages        Message[]
 
   @@index([organizationId])
   @@index([knowledgeBaseId])
@@ -207,6 +212,7 @@ model Conversation {
 model Message {
   id                String          @id @default(uuid())
   conversationId    String
+  agentId           String
   role              String
   content           String
   status            String          @default("sent")
@@ -218,8 +224,11 @@ model Message {
   metadata          Json?
   createdAt         DateTime        @default(now()) @db.Timestamptz(6)
   conversation      Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  agent             Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
   queries           DocumentQuery[]
 
+  @@index([agentId, role, createdAt])
+  @@index([agentId, createdAt])
   @@index([conversationId, createdAt])
   @@index([createdAt])
   @@index([responseTimeMs])
@@ -241,13 +250,17 @@ model KnowledgeBase {
 }
 
 model Document {
-  id              String          @id @default(uuid())
+  id              String          @default(uuid()) @id
   knowledgeBaseId String
   name            String
   type            String
   content         String?
   url             String?
   status          String          @default("pending")
+  // Embedder that produced this document's chunk vectors, e.g.
+  // 'local:bge-small' or 'openai:text-embedding-3-small'. Set on each
+  // successful index; used to detect stale embeddings after a model switch.
+  embeddedWith    String?
   createdAt       DateTime        @default(now()) @db.Timestamptz(6)
   fileKey         String?
   knowledgeBase   KnowledgeBase   @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
@@ -393,7 +406,7 @@ model Analytics {
   agent                  Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, date])
-  @@index([agentId])
+  @@index([date])
 }
 
 model Invitation {
@@ -605,6 +618,7 @@ model Plan {
   price                    String?
   priceMonthly             Float?
   priceYearly              Float?
+  yearlyDiscountPercent    Float?
   yearlyPrice              String?
   period                   String?
   badge                    String?

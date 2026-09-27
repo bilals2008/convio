@@ -54,6 +54,8 @@ import emailPlugin from './services/email.jsx'
 import notificationsPlugin from './services/notifications/index.js'
 import notificationsRoutes from './modules/notifications/routes.js'
 import { initDiscordGateway, shutdownDiscordGateway } from './services/discord-gateway.js'
+import { warmEmbeddings } from './services/processor.js'
+import { warmReranker } from './services/reranker.js'
 
 
 async function buildServer() {
@@ -136,6 +138,12 @@ async function buildServer() {
 async function start() {
   const app = await buildServer()
   const { PORT, HOST } = app.config
+
+  // Warm the local transformer models off the request path so the first
+  // retrieval doesn't stall on a cold model download. Fire-and-forget: a failed
+  // warmup must not stop the server from booting.
+  void warmEmbeddings().catch((err) => app.log.warn({ err }, 'Embedding warmup failed'))
+  void warmReranker().catch((err) => app.log.warn({ err }, 'Reranker warmup failed'))
 
   const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
   for (const signal of signals) {

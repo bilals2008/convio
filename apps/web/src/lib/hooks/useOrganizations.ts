@@ -9,6 +9,8 @@ export interface Organization {
   plan?: string
   role?: string
   aiGenerationModel?: string | null
+  embeddingProvider?: string | null
+  embeddingModel?: string | null
 }
 
 export function useOrganizations({ enabled = true }: { enabled?: boolean } = {}) {

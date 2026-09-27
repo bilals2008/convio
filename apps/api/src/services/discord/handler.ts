@@ -3,6 +3,7 @@ import { chatWithAgent } from '../../modules/ai/routes.js'
 import { formatResponse } from '../formatters/index.js'
 import { patchWebhookMessage, sendFollowupMessage, BOT_COLOR, sendChannelMessage, createThread, buildActionRow, buildButton } from './client.js'
 import { checkRolePermission } from './permissions.js'
+import { overMessageLimit, MESSAGE_LIMIT_NOTICE } from '../billing.js'
 import type { DiscordInteraction, InteractionResponse } from './types.js'
 
 const INTERACTION_TYPE_PING = 1
@@ -287,8 +288,18 @@ async function handleAiReply(
       })
     }
 
+    if (await overMessageLimit(deployment.agent.organizationId)) {
+      const notice = { embeds: [{ description: MESSAGE_LIMIT_NOTICE, color: BOT_COLOR }] }
+      try {
+        await patchWebhookMessage(interaction.application_id, interaction.token!, notice)
+      } catch {
+        await sendFollowupMessage(interaction.application_id, interaction.token!, notice).catch(() => {})
+      }
+      return
+    }
+
     await prisma.message.create({
-      data: { conversationId: conversation.id, role: 'user', content: text, providerMessageId: interaction.id, metadata: { userId: contactId, providerMessageId: interaction.id } },
+      data: { conversationId: conversation.id, agentId: conversation.agentId, role: 'user', content: text, providerMessageId: interaction.id, metadata: { userId: contactId, providerMessageId: interaction.id } },
     })
 
     const history = await prisma.message.findMany({
@@ -305,7 +316,7 @@ async function handleAiReply(
     const replyText = formatResponse('discord', reply || 'Sorry, I could not generate a response. Please try again.')
 
     const assistantMsg = await prisma.message.create({
-      data: { conversationId: conversation.id, role: 'assistant', content: reply },
+      data: { conversationId: conversation.id, agentId: conversation.agentId, role: 'assistant', content: reply },
     })
 
     let replied: { id?: string; channel_id?: string } = {}

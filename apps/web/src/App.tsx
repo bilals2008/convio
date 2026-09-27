@@ -40,9 +40,7 @@ const AdminAccessPage = lazyLoad(() => import('@/admin/pages/admin-access-page')
 const AdminAssistantPage = lazyLoad(() => import('@/admin/pages/assistant-page'))
 const AdminTicketsPage = lazyLoad(() => import('@/admin/pages/tickets-page'))
 const AdminTicketDetailPage = lazyLoad(() => import('@/admin/pages/ticket-detail-page'))
-const AdminPlaygroundPage = lazyLoad(() => import('@/admin/pages/playground-page'))
 const AdminApiUsagePage = lazyLoad(() => import('@/admin/pages/api-usage-page'))
-const AdminFontsPage = lazyLoad(() => import('@/admin/pages/fonts-page'))
 
 const Landing = lazyLoad(() => import('@/pages/landing'))
 const PricingPage = lazyLoad(() => import('@/pages/pricing-page'))
@@ -80,7 +78,7 @@ const NotificationPreferencesPage = lazyLoad(() => import('@/pages/settings/noti
 const SupportTicketsPage = lazyLoad(() => import('@/pages/support/support-tickets-page'))
 const SupportTicketDetailPage = lazyLoad(() => import('@/pages/support/ticket-detail-page'))
 const NotificationsPage = lazyLoad(() => import('@/pages/notifications-page'))
-const DocsComingSoonPage = lazyLoad(() => import('@/pages/docs-coming-soon-page'))
+const DocsPage = lazyLoad(() => import('@/pages/docs/docs-page'))
 
 import InvitePage from '@/pages/invite-page'
 import StatusPage from '@/pages/status-page'
@@ -93,6 +91,11 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+// Org settings are edited from several pages (profile → embedding/AI model
+// cards) and read from others (knowledge detail summary). Always refetch them
+// on mount so a change made in Settings is never served stale elsewhere.
+queryClient.setQueryDefaults({ queryKey: ['organization'], staleTime: 0 })
 
 export function App() {
   return (
@@ -114,8 +117,7 @@ export function App() {
             <Route path="/invite" element={<InvitePage />} />
             <Route path="/status" element={<StatusPage />} />
             <Route path="/widget/demo" element={<WidgetDemoPage />} />
-            <Route path="/docs" element={<DocsComingSoonPage />} />
-            <Route path="/docs/*" element={<Navigate to="/docs" replace />} />
+            <Route path="/docs/*" element={<DocsPage />} />
             <Route element={<ErrorBoundary name="Dashboard"><DashboardLayout /></ErrorBoundary>}>
             <Route path="/dashboard" element={<DashboardOverviewPage />} />
               <Route path="/dashboard/analytics" element={<AnalyticsPage />} />
@@ -176,11 +178,9 @@ export function App() {
                 <Route path="/admin/knowledge-bases/:id" element={<AdminKnowledgeBaseDetailPage />} />
                 <Route path="/admin/knowledge-bases/:kbId/documents/:documentId" element={<AdminKnowledgeDocumentDetailPage />} />
                 <Route path="/admin/assistant" element={<AdminAssistantPage />} />
-                <Route path="/admin/playground" element={<AdminPlaygroundPage />} />
                 <Route path="/admin/tickets" element={<AdminTicketsPage />} />
                 <Route path="/admin/tickets/:ticketId" element={<AdminTicketDetailPage />} />
                 <Route path="/admin/api-usage" element={<AdminApiUsagePage />} />
-                <Route path="/admin/fonts" element={<AdminFontsPage />} />
               </Route>
             </Route>
           </Routes>

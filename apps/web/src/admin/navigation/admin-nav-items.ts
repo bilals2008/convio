@@ -17,9 +17,7 @@ import {
   Bell,
   Bot,
   LifeBuoy,
-  FlaskConical,
   Zap,
-  Type,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -72,7 +70,6 @@ export const adminNavGroups: NavGroup[] = [
       { icon: Zap, label: 'API Usage', href: '/admin/api-usage', permission: 'admin.analytics.read' },
       { icon: Activity, label: 'System Health', href: '/admin/system', permission: 'admin.system.read' },
       { icon: Bot, label: 'AI Assistant', href: '/admin/assistant', permission: 'admin.assistant.read' },
-      { icon: FlaskConical, label: 'Playground', href: '/admin/playground', permission: 'admin.access' },
       { icon: BookOpen, label: 'Knowledge Bases', href: '/admin/knowledge-bases', permission: 'admin.knowledge.read' },
       { icon: LifeBuoy, label: 'Support Tickets', href: '/admin/tickets', permission: 'admin.tickets.read' },
       { icon: Flag, label: 'Moderation', href: '/admin/moderation', permission: 'admin.moderation.read' },
@@ -86,7 +83,6 @@ export const adminNavGroups: NavGroup[] = [
       { icon: CreditCard, label: 'Billing', href: '/admin/billing', permission: 'admin.billing.read' },
       { icon: Tags, label: 'Pricing', href: '/admin/pricing', permission: 'admin.billing.read' },
       { icon: Shield, label: 'Providers', href: '/admin/providers', permission: 'admin.providers.read' },
-      { icon: Type, label: 'Fonts', href: '/admin/fonts', permission: 'admin.access' },
       { icon: Bell, label: 'Notifications', href: '/admin/notifications', permission: 'admin.system.read' },
       { icon: KeyRound, label: 'Admin Access', href: '/admin/access', permission: 'admin.access.manage' },
     ],

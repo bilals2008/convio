@@ -10,6 +10,14 @@ async function load() {
   return { model, tokenizer }
 }
 
+/**
+ * Pre-load the cross-encoder off the request path. Without this the first
+ * retrieval after a deploy pays a multi-second model download.
+ */
+export async function warmReranker(): Promise<void> {
+  await load()
+}
+
 export async function rerank<T extends { content: string }>(
   query: string,
   items: T[],

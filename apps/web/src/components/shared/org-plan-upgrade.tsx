@@ -2,8 +2,8 @@ import { Building2, ArrowUpRight, Crown, Star, Shield } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { pricingConfig, type PlanLimits } from '@/lib/pricing/config'
-import { usePricingPlans } from '@/lib/pricing/use-pricing-config'
+import { type PlanLimits } from '@/lib/pricing/config'
+import { usePricingPlanList } from '@/lib/pricing/use-pricing-config'
 import { cn } from '@/lib/utils'
 
 interface OrgPlanUpgradeProps {
@@ -28,11 +28,10 @@ function formatOrgs(value: PlanLimits['organizations'] | null | undefined): numb
 
 export function OrgPlanUpgrade({ currentOrgs, currentPlan, limit }: OrgPlanUpgradeProps) {
   const navigate = useNavigate()
-  const { data: remotePlans } = usePricingPlans()
+  const { plans, isUnavailable } = usePricingPlanList()
   const planLabel = currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)
 
-  // Falls back to the local pricing config when the plans API is unavailable.
-  const upgradePlans = (remotePlans ?? pricingConfig.plans)
+  const upgradePlans = plans
     .filter((plan) => (UPGRADE_KEYS as readonly string[]).includes(plan.key))
     .map((plan) => ({
       key: plan.key,
@@ -66,9 +65,10 @@ export function OrgPlanUpgrade({ currentOrgs, currentPlan, limit }: OrgPlanUpgra
         </CardContent>
       </Card>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground px-0.5">Upgrade to unlock more organizations</p>
-        <div className="grid gap-2">
+      {upgradePlans.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground px-0.5">Upgrade to unlock more organizations</p>
+          <div className="grid gap-2">
           {upgradePlans.map((plan) => {
             const Icon = plan.icon
             const isCurrent = plan.key === currentPlan
@@ -103,8 +103,13 @@ export function OrgPlanUpgrade({ currentOrgs, currentPlan, limit }: OrgPlanUpgra
               </button>
             )
           })}
+          </div>
         </div>
-      </div>
+      ) : isUnavailable ? (
+        <p className="text-xs text-muted-foreground">
+          Plan options are unavailable right now. You can still manage billing below.
+        </p>
+      ) : null}
 
       <Button
         variant="default"

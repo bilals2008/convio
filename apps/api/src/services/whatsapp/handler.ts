@@ -5,6 +5,7 @@ import { sendTypingIndicator } from './client.js'
 import { extractInteractiveReply } from './interactive.js'
 import { getBusinessHoursConfig, isWithinBusinessHours, getOfflineMessage } from './business-hours.js'
 import { sendPlatformMessage } from '../kapso-platform.js'
+import { overMessageLimit, MESSAGE_LIMIT_NOTICE } from '../billing.js'
 
 const OPT_OUT_KEYWORDS = ['stop', 'unsubscribe', 'cancel', 'opt out', 'opt-out']
 const OPT_IN_KEYWORDS = ['start', 'subscribe', 'opt in', 'opt-in', 'resubscribe']
@@ -209,9 +210,16 @@ export async function processIncomingMessage(
       })
     }
 
+    if (await overMessageLimit(deployment.agent.organizationId)) {
+      const notice = formatResponse('whatsapp', MESSAGE_LIMIT_NOTICE)
+      await sendPlatformMessage(phoneNumberId, fromNumber, notice)
+      return { response: notice }
+    }
+
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'user',
         content: body,
         providerMessageId: payload.messageId || null,
@@ -240,6 +248,7 @@ export async function processIncomingMessage(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'assistant',
         content: reply,
       },

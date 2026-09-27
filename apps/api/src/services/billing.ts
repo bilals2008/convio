@@ -76,15 +76,20 @@ export async function getOrgPlan(orgId: string): Promise<BillingPlan> {
     }
   }
 
-  const planDef = (await getPlanDef(planKey)) ?? (await getPlanDef('free'))!
+  const planDef = await getPlanDef(planKey)
+  // A plan row that no longer exists (deleted, or renamed) must not report the dangling
+  // key: the feature gates are deny-lists keyed on the name, so a paid-looking name with
+  // free limits would grant paid features. Fall back to free for BOTH halves.
+  const resolved = planDef ? planKey : 'free'
+  const def = planDef ?? (await getPlanDef('free'))!
 
   return {
-    name: planKey as BillingPlan['name'],
-    label: planDef.label,
-    features: planDef.features,
-    limits: planDef.limits,
-    price: planDef.price,
-    priceMonthly: planDef.priceMonthly,
+    name: resolved as BillingPlan['name'],
+    label: def.label,
+    features: def.features,
+    limits: def.limits,
+    price: def.price,
+    priceMonthly: def.priceMonthly,
     trialEndsAt: trialEndsAt?.toISOString() ?? null,
     isTrial,
   }
@@ -113,9 +118,11 @@ export async function getOrgUsage(orgId: string, month?: number, year?: number):
     conversations,
     messages,
     limit: plan.limits.messagesPerMonth,
-    messagesPercent: plan.limits.messagesPerMonth === Infinity
-      ? 0
-      : Math.round((messages / plan.limits.messagesPerMonth) * 100),
+    // A 0 limit blocks everything, so dividing by it would yield Infinity — which
+    // serialises to null and renders as "0% used" on an org that is fully blocked.
+    messagesPercent: plan.limits.messagesPerMonth > 0
+      ? Math.min(100, Math.round((messages / plan.limits.messagesPerMonth) * 100))
+      : messages > 0 ? 100 : 0,
   }
 
   usageCache.set(cacheKey, { expiresAt: Date.now() + USAGE_CACHE_TTL_MS, value })
@@ -148,6 +155,31 @@ export async function checkMessageLimit(orgId: string) {
   }
 }
 
+export async function checkKnowledgeBaseLimit(orgId: string) {
+  const plan = await getOrgPlan(orgId)
+  const limit = plan.limits.knowledgeBases
+
+  const count = await prisma.knowledgeBase.count({
+    where: { organizationId: orgId },
+  })
+
+  return {
+    allowed: limit === Infinity || count < limit,
+    current: count,
+    limit,
+  }
+}
+
+export const MESSAGE_LIMIT_NOTICE = 'This conversation has reached its monthly message limit.'
+
+// Channel handlers (WhatsApp, Slack, Discord, Telegram, SMS) have no HTTP response to
+// reject with, so they meter before writing anything: over the limit means no rows stored
+// and no model call, and the contact is told why.
+export async function overMessageLimit(orgId: string): Promise<boolean> {
+  const { allowed } = await checkMessageLimit(orgId)
+  return !allowed
+}
+
 export async function checkOrgLimit(userId: string) {
   const memberships = await prisma.membership.findMany({
     where: { userId },
@@ -156,10 +188,14 @@ export async function checkOrgLimit(userId: string) {
 
   const orgCount = memberships.length
   const tierMap = await getPlanTierMap()
-  const maxTier = memberships.reduce((highest, m) => {
-    const tier = tierMap[m.organization.plan as string] ?? 0
-    return tier > highest ? tier : highest
-  }, 0)
+  // A user gets the org allowance of their best plan. An org whose plan key has no row is
+  // on no plan, so it must sit BELOW every real tier — defaulting it to 0 handed it
+  // whichever plan the admin happened to put at sortOrder 0.
+  const NO_PLAN = -1
+  const maxTier = memberships.reduce(
+    (highest, m) => Math.max(highest, tierMap[m.organization.plan as string] ?? NO_PLAN),
+    NO_PLAN,
+  )
 
   const planKey = Object.entries(tierMap).find(([, t]) => t === maxTier)?.[0] || 'free'
   const planDef = (await getPlanDef(planKey)) ?? (await getPlanDef('free'))!

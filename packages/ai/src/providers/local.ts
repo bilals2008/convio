@@ -1,13 +1,47 @@
-import type { AIProvider, GenerateParams, GenerateResult, StreamChunk, Model, ModerationResult } from '../index.js'
+import type { AIProvider, EmbedOptions, GenerateParams, GenerateResult, StreamChunk, Model, ModerationResult } from '../index.js'
 import { toProviderError } from './errors.js'
 
 const LOCAL_BASE = process.env.LOCAL_API_URL || 'http://localhost:20128/v1'
 
+/**
+ * Supported local embedding models — all 384-dim to match DocumentChunk vector(384).
+ * MiniLM is the legacy default; bge-small is the same-size quality upgrade;
+ * multilingual-e5 covers non-English KBs. All download on first use via
+ * @huggingface/transformers and cache on the VPS.
+ */
+export const LOCAL_EMBEDDING_MODELS = {
+  'all-minilm': 'Xenova/all-MiniLM-L6-v2',
+  'bge-small': 'Xenova/bge-small-en-v1.5',
+  'multilingual-e5': 'Xenova/multilingual-e5-small',
+} as const
+
+export type LocalEmbeddingModelId = keyof typeof LOCAL_EMBEDDING_MODELS
+
+const DEFAULT_LOCAL_EMBEDDING_MODEL: LocalEmbeddingModelId =
+  (process.env.LOCAL_EMBEDDING_MODEL as LocalEmbeddingModelId) in LOCAL_EMBEDDING_MODELS
+    ? (process.env.LOCAL_EMBEDDING_MODEL as LocalEmbeddingModelId)
+    : 'all-minilm'
+
+/** bge/e5 need an instruction prefix on queries only (not stored documents). */
+const QUERY_PREFIX: Record<string, string> = {
+  'Xenova/bge-small-en-v1.5': 'Represent this sentence for searching relevant passages: ',
+  'Xenova/multilingual-e5-small': 'query: ',
+}
+
 let embedPipeline: any = null
-async function getEmbedPipeline() {
-  if (!embedPipeline) {
+let embedPipelineModel: string | null = null
+
+/**
+ * The pipeline is model-bound: switching models swaps the cached pipeline.
+ * One process should stick to one model — the org setting is read once per
+ * embed call, but transformers.js caches downloaded weights on disk either way.
+ */
+async function getEmbedPipeline(modelId: string) {
+  if (!embedPipeline || embedPipelineModel !== modelId) {
     const { pipeline } = await import('@huggingface/transformers')
-    embedPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
+    await embedPipeline?.dispose?.()
+    embedPipeline = await pipeline('feature-extraction', modelId)
+    embedPipelineModel = modelId
   }
   return embedPipeline
 }
@@ -155,10 +189,13 @@ export class LocalProvider implements AIProvider {
     yield { type: 'done', usage: finalUsage }
   }
 
-  async embed(text: string): Promise<number[]> {
+  async embed(text: string, options?: EmbedOptions): Promise<number[]> {
     try {
-      const pipe = await getEmbedPipeline()
-      const result = await pipe(text, { pooling: 'mean', normalize: true })
+      const key = (options?.model as LocalEmbeddingModelId) ?? DEFAULT_LOCAL_EMBEDDING_MODEL
+      const modelId = LOCAL_EMBEDDING_MODELS[key] ?? LOCAL_EMBEDDING_MODELS[DEFAULT_LOCAL_EMBEDDING_MODEL]
+      const prefixed = options?.task === 'query' ? (QUERY_PREFIX[modelId] ?? '') + text : text
+      const pipe = await getEmbedPipeline(modelId)
+      const result = await pipe(prefixed, { pooling: 'mean', normalize: true })
       return Array.from(result.data) as number[]
     } catch (error) {
       throw toProviderError(error, 'OmniRoute')

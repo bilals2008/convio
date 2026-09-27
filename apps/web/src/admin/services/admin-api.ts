@@ -315,6 +315,7 @@ export interface AdminPlan {
   price: string | null
   priceMonthly: number | null
   priceYearly: number | null
+  yearlyDiscountPercent: number | null
   yearlyPrice: string | null
   period: string | null
   badge: string | null
@@ -342,6 +343,12 @@ export interface AdminPlan {
 }
 
 export type CreemPeriod = 'monthly' | 'yearly'
+
+export interface CreemSyncResult {
+  period: CreemPeriod
+  status: 'synced' | 'skipped' | 'failed'
+  message?: string
+}
 
 export interface CreemProductSummary {
   id: string
@@ -579,7 +586,7 @@ export const adminApi = {
   createPlan: (data: Partial<AdminPlan>) => api.post<{ data: AdminPlan }>('/admin/plans', data),
 
   updatePlan: (id: string, data: Partial<AdminPlan>) =>
-    api.patch<{ data: AdminPlan }>(`/admin/plans/${id}`, data),
+    api.patch<{ data: AdminPlan; creemSync: CreemSyncResult[] }>(`/admin/plans/${id}`, data),
 
   deletePlan: (id: string) => api.delete(`/admin/plans/${id}`),
 

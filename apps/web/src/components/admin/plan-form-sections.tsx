@@ -32,23 +32,23 @@ export function FormField({ label, required, error, hint, className, children }:
 interface CardSectionProps {
   icon: React.ComponentType<{ className?: string }>
   title: string
-  description: string
+  description?: string
   children: ReactNode
 }
 
 export function CardSection({ icon: Icon, title, description, children }: CardSectionProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Icon className="size-4.5" />
+      <CardHeader className="flex flex-row items-center gap-2.5 px-4 pt-4 pb-3">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="size-3.5" />
         </div>
-        <div>
+        <div className="min-w-0">
           <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+          {description && <CardDescription className="mt-0.5">{description}</CardDescription>}
         </div>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="px-4 pb-4">{children}</CardContent>
     </Card>
   )
 }

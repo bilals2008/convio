@@ -47,6 +47,9 @@ export default fp(async function errorHandlerPlugin(fastify: FastifyInstance) {
       return reply.code(error.statusCode).send({
         success: false,
         message: error.message,
+        // Sent so the client can branch on the reason (e.g. offer an Upgrade action on a
+        // PLAN_LIMIT_EXCEEDED) instead of pattern-matching the message text.
+        code: error.code,
       })
     }
 
