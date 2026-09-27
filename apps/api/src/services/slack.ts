@@ -174,6 +174,7 @@ export async function processSlackEvent(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'user',
         content: text,
         metadata: { slackUser: contactId, slackChannelId: channelId },
@@ -194,6 +195,7 @@ export async function processSlackEvent(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'assistant',
         content: reply,
       },

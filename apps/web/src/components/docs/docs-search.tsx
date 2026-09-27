@@ -32,10 +32,10 @@ export function DocsShortcut({ className }: { className?: string }) {
 }
 
 /**
- * Open state is owned by the shell, not here: ⌘K has to work from anywhere on the page,
- * and two owners of one dialog can only fight.
+ * The dialog on its own, so a page can own its own trigger — the docs index opens it from
+ * a hero-sized search field instead of the topbar chip. The corpus is the same either way.
  */
-export function DocsSearch({
+export function DocsSearchDialog({
   open,
   onOpenChange,
 }: {
@@ -54,6 +54,55 @@ export function DocsSearch({
   })
 
   return (
+    <CommandDialog open={open} onOpenChange={onOpenChange}>
+      <CommandInput placeholder="Search documentation…" />
+      <CommandList className="max-h-[50vh]">
+        <CommandEmpty>No results.</CommandEmpty>
+        {Array.from(
+          items.reduce<Map<string, SearchItem[]>>((map, item) => {
+            return map.set(item.section, [...(map.get(item.section) ?? []), item])
+          }, new Map()),
+        ).map(([section, sectionItems]: [string, SearchItem[]]) => (
+          <CommandGroup key={section} heading={section}>
+            {sectionItems.map((item) => (
+              <CommandItem
+                key={item.slug}
+                value={item.haystack}
+                onSelect={() => {
+                  onOpenChange(false)
+                  navigate(item.slug ? `/docs/${item.slug}` : '/docs')
+                }}
+              >
+                <FileText />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate">{item.title}</span>
+                  {item.description && (
+                    <span className="truncate text-xs text-muted-foreground">
+                      {item.description}
+                    </span>
+                  )}
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ))}
+      </CommandList>
+    </CommandDialog>
+  )
+}
+
+/**
+ * Open state is owned by the shell, not here: ⌘K has to work from anywhere on the page,
+ * and two owners of one dialog can only fight.
+ */
+export function DocsSearch({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  return (
     <>
       <button
         onClick={() => onOpenChange(true)}
@@ -65,40 +114,7 @@ export function DocsSearch({
         <DocsShortcut className="hidden md:flex" />
       </button>
 
-      <CommandDialog open={open} onOpenChange={onOpenChange}>
-        <CommandInput placeholder="Search documentation…" />
-        <CommandList className="max-h-[50vh]">
-          <CommandEmpty>No results.</CommandEmpty>
-          {Array.from(
-            items.reduce<Map<string, SearchItem[]>>((map, item) => {
-              return map.set(item.section, [...(map.get(item.section) ?? []), item])
-            }, new Map()),
-          ).map(([section, sectionItems]: [string, SearchItem[]]) => (
-            <CommandGroup key={section} heading={section}>
-              {sectionItems.map((item) => (
-                <CommandItem
-                  key={item.slug}
-                  value={item.haystack}
-                  onSelect={() => {
-                    onOpenChange(false)
-                    navigate(item.slug ? `/docs/${item.slug}` : '/docs')
-                  }}
-                >
-                  <FileText />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate">{item.title}</span>
-                    {item.description && (
-                      <span className="truncate text-xs text-muted-foreground">
-                        {item.description}
-                      </span>
-                    )}
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          ))}
-        </CommandList>
-      </CommandDialog>
+      <DocsSearchDialog open={open} onOpenChange={onOpenChange} />
     </>
   )
 }

@@ -349,6 +349,7 @@ export async function processTelegramUpdate(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'user',
         content: text,
         metadata: { chatId, chatType, ...(isGroup ? { groupTitle: message.chat.title } : {}) },
@@ -371,6 +372,7 @@ export async function processTelegramUpdate(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'assistant',
         content: reply,
       },

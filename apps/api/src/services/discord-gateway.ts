@@ -123,7 +123,7 @@ async function handleMessageCreate(data: any, botToken: string, botUserId: strin
   }
 
   await prisma.message.create({
-    data: { conversationId: conversation.id, role: 'user', content: text, providerMessageId: data.id, metadata: { userId: contactId, providerMessageId: data.id } },
+    data: { conversationId: conversation.id, agentId: conversation.agentId, role: 'user', content: text, providerMessageId: data.id, metadata: { userId: contactId, providerMessageId: data.id } },
   })
 
   const history = await prisma.message.findMany({
@@ -141,7 +141,7 @@ async function handleMessageCreate(data: any, botToken: string, botUserId: strin
     const replyText = formatResponse('discord', reply || 'Sorry, I could not generate a response. Please try again.')
 
     const assistantMsg = await prisma.message.create({
-      data: { conversationId: conversation.id, role: 'assistant', content: reply },
+      data: { conversationId: conversation.id, agentId: conversation.agentId, role: 'assistant', content: reply },
     })
 
     const sentMsg = await sendChannelMessage(

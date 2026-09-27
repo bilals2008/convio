@@ -122,6 +122,7 @@ model Agent {
   deployments     Deployment[]
   widgets         Widget[]
   broadcasts      Broadcast[]
+  messages        Message[]
 
   @@index([organizationId])
   @@index([knowledgeBaseId])
@@ -207,6 +208,7 @@ model Conversation {
 model Message {
   id                String          @id @default(uuid())
   conversationId    String
+  agentId           String
   role              String
   content           String
   status            String          @default("sent")
@@ -218,8 +220,11 @@ model Message {
   metadata          Json?
   createdAt         DateTime        @default(now()) @db.Timestamptz(6)
   conversation      Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  agent             Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
   queries           DocumentQuery[]
 
+  @@index([agentId, role, createdAt])
+  @@index([agentId, createdAt])
   @@index([conversationId, createdAt])
   @@index([createdAt])
   @@index([responseTimeMs])
@@ -393,7 +398,7 @@ model Analytics {
   agent                  Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, date])
-  @@index([agentId])
+  @@index([date])
 }
 
 model Invitation {

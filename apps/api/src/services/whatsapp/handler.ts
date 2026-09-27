@@ -219,6 +219,7 @@ export async function processIncomingMessage(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'user',
         content: body,
         providerMessageId: payload.messageId || null,
@@ -247,6 +248,7 @@ export async function processIncomingMessage(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'assistant',
         content: reply,
       },

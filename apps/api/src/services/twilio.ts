@@ -241,6 +241,7 @@ export async function processIncomingMessage(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'user',
         content: text || (mediaCount > 0 ? '[Media message]' : ''),
         providerMessageId: payload.MessageSid || null,
@@ -264,6 +265,7 @@ export async function processIncomingMessage(
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
+        agentId: conversation.agentId,
         role: 'assistant',
         content: reply,
       },

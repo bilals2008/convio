@@ -34,11 +34,13 @@ export async function getAvgResponseTime(
   fromDate: Date,
   toDate: Date,
 ) {
+  // Message.agentId is denormalized and kept NOT NULL (backfilled + always set
+  // on create), so the Message_agentId_role_createdAt_idx serves this directly
+  // — no Conversation join needed.
   const result = await prisma.$queryRaw<{ avg: number | null }[]>`
     SELECT AVG("response_time_ms") as avg
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."role" = 'assistant'
       AND m."response_time_ms" IS NOT NULL
       AND m."createdAt" >= ${fromDate}
@@ -55,8 +57,7 @@ export async function getTokenTotals(
   const result = await prisma.$queryRaw<{ input: bigint | null; output: bigint | null }[]>`
     SELECT SUM("input_tokens") as input, SUM("output_tokens") as output
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."role" = 'assistant'
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
@@ -83,7 +84,7 @@ export async function getMessageCount(
   toDate: Date,
 ) {
   return prisma.message.count({
-    where: { conversation: { agentId: { in: agentIds } }, createdAt: { gte: fromDate, lte: toDate } },
+    where: { agentId: { in: agentIds }, createdAt: { gte: fromDate, lte: toDate } },
   })
 }
 
@@ -108,8 +109,7 @@ export async function getDailyResponseTime(
   return prisma.$queryRaw<{ date: Date; avg: number | null }[]>`
     SELECT DATE(m."createdAt") as date, AVG(m."response_time_ms") as avg
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."role" = 'assistant'
       AND m."response_time_ms" IS NOT NULL
       AND m."createdAt" >= ${fromDate}
@@ -145,8 +145,7 @@ export async function getMessagesByDate(
   return prisma.$queryRaw<{ date: Date; count: bigint }[]>`
     SELECT DATE(m."createdAt") as date, COUNT(*)::int as count
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
     GROUP BY DATE(m."createdAt")
@@ -162,8 +161,7 @@ export async function getDailyTokens(
   return prisma.$queryRaw<{ date: Date; input: bigint | null; output: bigint | null }[]>`
     SELECT DATE(m."createdAt") as date, SUM(m."input_tokens") as input, SUM(m."output_tokens") as output
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."role" = 'assistant'
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
@@ -182,8 +180,7 @@ export async function getConversationSuccessRate(
     FROM (
       SELECT DISTINCT m."conversationId"
       FROM "Message" m
-      JOIN "Conversation" c ON c."id" = m."conversationId"
-      WHERE c."agentId" = ANY(${agentIds})
+      WHERE m."agentId" = ANY(${agentIds})
         AND m."role" = 'assistant'
         AND m."createdAt" >= ${fromDate}
         AND m."createdAt" <= ${toDate}
@@ -265,8 +262,7 @@ export async function getAgentDailyTokens(
   return prisma.$queryRaw<{ date: Date; input: bigint | null; output: bigint | null }[]>`
     SELECT DATE(m."createdAt") as date, SUM(m."input_tokens") as input, SUM(m."output_tokens") as output
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ${agentId}
+    WHERE m."agentId" = ${agentId}
       AND m."role" = 'assistant'
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
@@ -283,8 +279,7 @@ export async function getAgentTokenTotals(
   const result = await prisma.$queryRaw<{ input: bigint | null; output: bigint | null }[]>`
     SELECT SUM("input_tokens") as input, SUM("output_tokens") as output
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ${agentId}
+    WHERE m."agentId" = ${agentId}
       AND m."role" = 'assistant'
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
@@ -303,8 +298,7 @@ export async function getAgentAvgResponseTime(
   const result = await prisma.$queryRaw<{ avg: number | null }[]>`
     SELECT AVG("response_time_ms") as avg
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ${agentId}
+    WHERE m."agentId" = ${agentId}
       AND m."role" = 'assistant'
       AND m."response_time_ms" IS NOT NULL
       AND m."createdAt" >= ${fromDate}
@@ -337,8 +331,7 @@ export async function getAgentMessagesByDate(
   return prisma.$queryRaw<{ date: Date; count: bigint }[]>`
     SELECT DATE(m."createdAt") as date, COUNT(*)::int as count
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ${agentId}
+    WHERE m."agentId" = ${agentId}
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
     GROUP BY DATE(m."createdAt")
@@ -356,8 +349,7 @@ export async function getAgentSuccessRate(
     FROM (
       SELECT DISTINCT m."conversationId"
       FROM "Message" m
-      JOIN "Conversation" c ON c."id" = m."conversationId"
-      WHERE c."agentId" = ${agentId}
+      WHERE m."agentId" = ${agentId}
         AND m."role" = 'assistant'
         AND m."createdAt" >= ${fromDate}
         AND m."createdAt" <= ${toDate}
@@ -387,53 +379,49 @@ export async function getTopAgentConversationCounts(agentIds: string[], fromDate
 
 export async function getTopAgentMessageCounts(agentIds: string[], fromDate: Date, toDate: Date) {
   return prisma.$queryRaw<{ agent_id: string; count: bigint }[]>`
-    SELECT c."agentId" as agent_id, COUNT(*)::int as count
+    SELECT m."agentId" as agent_id, COUNT(*)::int as count
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
-    GROUP BY c."agentId"
+    GROUP BY m."agentId"
   `
 }
 
 export async function getTopAgentTokens(agentIds: string[], fromDate: Date, toDate: Date) {
   return prisma.$queryRaw<{ agent_id: string; input: bigint | null; output: bigint | null }[]>`
-    SELECT c."agentId" as agent_id, SUM(m."input_tokens") as input, SUM(m."output_tokens") as output
+    SELECT m."agentId" as agent_id, SUM(m."input_tokens") as input, SUM(m."output_tokens") as output
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."role" = 'assistant'
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
-    GROUP BY c."agentId"
+    GROUP BY m."agentId"
   `
 }
 
 export async function getTopAgentResponseTimes(agentIds: string[], fromDate: Date, toDate: Date) {
   return prisma.$queryRaw<{ agent_id: string; avg: number | null }[]>`
-    SELECT c."agentId" as agent_id, AVG(m."response_time_ms") as avg
+    SELECT m."agentId" as agent_id, AVG(m."response_time_ms") as avg
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."role" = 'assistant'
       AND m."response_time_ms" IS NOT NULL
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
-    GROUP BY c."agentId"
+    GROUP BY m."agentId"
   `
 }
 
 export async function getTopAgentSuccessRates(agentIds: string[], fromDate: Date, toDate: Date) {
   return prisma.$queryRaw<{ agent_id: string; with_replies: bigint }[]>`
-    SELECT c."agentId" as agent_id, COUNT(DISTINCT m."conversationId")::int as with_replies
+    SELECT m."agentId" as agent_id, COUNT(DISTINCT m."conversationId")::int as with_replies
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."role" = 'assistant'
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
-    GROUP BY c."agentId"
+    GROUP BY m."agentId"
   `
 }
 
@@ -501,8 +489,7 @@ export async function getTotalCost(agentIds: string[], fromDate: Date, toDate: D
   const result = await prisma.$queryRaw<{ total: number | null }[]>`
     SELECT SUM(m."cost") as total
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."cost" IS NOT NULL
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
@@ -514,8 +501,7 @@ export async function getAgentTotalCost(agentId: string, fromDate: Date, toDate:
   const result = await prisma.$queryRaw<{ total: number | null }[]>`
     SELECT SUM(m."cost") as total
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ${agentId}
+    WHERE m."agentId" = ${agentId}
       AND m."cost" IS NOT NULL
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
@@ -525,14 +511,13 @@ export async function getAgentTotalCost(agentId: string, fromDate: Date, toDate:
 
 export async function getTopAgentCosts(agentIds: string[], fromDate: Date, toDate: Date) {
   return prisma.$queryRaw<{ agent_id: string; total: number }[]>`
-    SELECT c."agentId" as agent_id, SUM(m."cost") as total
+    SELECT m."agentId" as agent_id, SUM(m."cost") as total
     FROM "Message" m
-    JOIN "Conversation" c ON c."id" = m."conversationId"
-    WHERE c."agentId" = ANY(${agentIds})
+    WHERE m."agentId" = ANY(${agentIds})
       AND m."cost" IS NOT NULL
       AND m."createdAt" >= ${fromDate}
       AND m."createdAt" <= ${toDate}
-    GROUP BY c."agentId"
+    GROUP BY m."agentId"
   `
 }
 
@@ -551,17 +536,16 @@ export async function getDailySnapshotAggregates(start: Date, end: Date) {
       GROUP BY "agentId"
     `,
     prisma.$queryRaw<{ agent_id: string; count: number; input: bigint | null; output: bigint | null; cost: number | null; avg_rt: number | null }[]>`
-      SELECT c."agentId" as agent_id,
+      SELECT m."agentId" as agent_id,
              COUNT(*)::int as count,
              SUM(m."input_tokens") as input,
              SUM(m."output_tokens") as output,
              SUM(m."cost") as cost,
              AVG(m."response_time_ms") as avg_rt
       FROM "Message" m
-      JOIN "Conversation" c ON c."id" = m."conversationId"
       WHERE m."createdAt" >= ${start} AND m."createdAt" < ${end}
         AND m."role" = 'assistant'
-      GROUP BY c."agentId"
+      GROUP BY m."agentId"
     `,
     prisma.$queryRaw<{ agent_id: string; count: number }[]>`
       SELECT "agentId" as agent_id, COUNT(DISTINCT "userId")::int as count
