@@ -711,12 +711,13 @@ export default async function knowledgeRoutes(fastify: FastifyInstance) {
       return { data: [] }
     }
 
-    const embedding = await embedText(q)
+    const embedding = await embedText(q, kb.organizationId)
     if (!embedding) {
-      throw new AppError(503, 'Embedding provider unavailable — set OPENAI_API_KEY (or wait for the local model to load) and re-index documents')
+      throw new AppError(503, 'Embedding provider unavailable — check the workspace embedding settings and re-index documents')
     }
 
     const vectorStr = `[${embedding.join(',')}]`
+    // Same calibrated cutoffs as retrieveContext — see processor.ts MAX_DISTANCE.
     const candidates = useRerank === 'true' ? 20 : topK
     const maxDist = useRerank === 'true' ? 0.85 : 0.75
 

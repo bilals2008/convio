@@ -34,7 +34,12 @@ function chunkContent(question: string, answer: string): string {
 /** Create or replace the RAG chunk for a Q&A pair (re-embeds on every change). */
 export async function syncQaChunk(qa: { id: string; documentId: string; question: string; answer: string }): Promise<void> {
   const content = chunkContent(qa.question, qa.answer)
-  const embedding = await embedText(content)
+  // The chunk's embedder must match the knowledge base it lives in.
+  const doc = await prisma.document.findUnique({
+    where: { id: qa.documentId },
+    select: { knowledgeBase: { select: { organizationId: true } } },
+  })
+  const embedding = await embedText(content, doc?.knowledgeBase.organizationId)
   const vectorStr = embedding ? `[${embedding.join(',')}]` : null
 
   await prisma.$executeRawUnsafe(
