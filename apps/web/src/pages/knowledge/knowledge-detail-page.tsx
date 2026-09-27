@@ -34,6 +34,7 @@ import {
 import { knowledge as knowledgeApi } from '@/lib/api'
 import type { SourceType } from '@/components/knowledge/source-picker-modal'
 import { useOrg } from '@/lib/org-context'
+import { organizations as orgsApi } from '@/lib/api'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -66,6 +67,7 @@ interface DocItem {
   status: 'pending' | 'processing' | 'ready' | 'error' | 'archived'
   chunkCount?: number
   createdAt: string
+  embeddedWith?: string | null
 }
 
 export default function KnowledgeDetailPage() {
@@ -114,6 +116,21 @@ export default function KnowledgeDetailPage() {
       return res.data.data as RawKnowledgeBase
     },
     enabled: isEdit,
+  })
+
+  // The workspace's real embedding config drives the Summary panel — the local
+  // KbSettings constant only holds chunking/retrieval defaults.
+  const { data: embeddingInfo } = useQuery({
+    queryKey: ['organization', orgId],
+    queryFn: async () => {
+      const res = await orgsApi.get(orgId!)
+      const org = res.data.data as { embeddingProvider?: string; embeddingModel?: string | null }
+      return {
+        provider: org.embeddingProvider === 'openai' ? 'openai' : 'local',
+        model: org.embeddingModel ?? (org.embeddingProvider === 'openai' ? 'text-embedding-3-small' : 'all-MiniLM-L6-v2'),
+      }
+    },
+    enabled: isEdit && !!orgId,
   })
 
   const docsQuery = useInfiniteQuery({
@@ -166,7 +183,7 @@ export default function KnowledgeDetailPage() {
         organizationId: orgId ?? '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        settings,
+        settings: { ...settings, embeddingModel: embeddingInfo?.model ?? settings.embeddingModel },
       }
     }
     if (!kb) return null
@@ -190,9 +207,9 @@ export default function KnowledgeDetailPage() {
       createdAt: kb.createdAt,
       updatedAt: kb.updatedAt,
       lastIndexedAt: kb.lastIndexedAt,
-      settings,
+      settings: { ...settings, embeddingModel: embeddingInfo?.model ?? settings.embeddingModel },
     }
-  }, [kb, documents, form, settings, isCreate, orgId])
+  }, [kb, documents, form, settings, isCreate, orgId, embeddingInfo])
 
   const health = useMemo(
     () => computeHealth(documents, settings, analytics.searches > 0 ? analytics.success / analytics.searches : null),
