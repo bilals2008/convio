@@ -74,6 +74,8 @@ export const organizationSchema = z.object({
   logo: z.string().url().optional(),
   plan: z.enum(['free', 'pro', 'business', 'enterprise']).default('free'),
   aiGenerationModel: z.string().max(200).nullable().optional(),
+  embeddingProvider: z.enum(['local', 'openai']).optional(),
+  embeddingModel: z.string().max(200).nullable().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })

@@ -43,6 +43,10 @@ model Organization {
   logo                    String?
   plan                    String                   @default("free")
   aiGenerationModel       String?
+  // Embedding backend for knowledge-base ingestion/retrieval: 'local' uses the
+  // bundled all-MiniLM-L6-v2 model; 'openai' uses the org's OpenAI provider key.
+  embeddingProvider       String                   @default("local")
+  embeddingModel          String?
   createdAt               DateTime                 @default(now()) @db.Timestamptz(6)
   updatedAt               DateTime                 @updatedAt @db.Timestamptz(6)
   agents                  Agent[]
