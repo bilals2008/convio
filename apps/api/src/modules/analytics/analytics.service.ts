@@ -3,6 +3,7 @@ import type {
   OrgAnalyticsResponse,
   AgentAnalyticsResponse,
   TopAgentEntry,
+  DailyBreakdown,
   DailyBreakdownEntry,
   AnalyticsSnapshotInput,
 } from './analytics.types.js'
@@ -26,6 +27,31 @@ function buildDailyMap(agentIds: string[], fromDate: Date, toDate: Date) {
     inputTokens: number
     outputTokens: number
   }>()
+}
+
+// charts can't draw a line through a single point, so pad days without activity
+export function fillMissingDays(rows: DailyBreakdown[], fromDate: Date, toDate: Date): DailyBreakdown[] {
+  if (rows.length === 0) return rows
+
+  const byDate = new Map(rows.map((r) => [r.date, r]))
+  const out: DailyBreakdown[] = []
+  const cursor = new Date(fromDate)
+
+  while (cursor <= toDate) {
+    const key = cursor.toISOString().slice(0, 10)
+    out.push(byDate.get(key) ?? {
+      date: key,
+      totalConversations: 0,
+      totalMessages: 0,
+      uniqueUsers: 0,
+      avgResponseTime: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    })
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  }
+
+  return out
 }
 
 async function buildDaily(
@@ -218,6 +244,8 @@ export async function getOrgAnalyticsRaw(
     if (rt != null) d.avgResponseTime = rt
   }
 
+  dailyBreakdown = fillMissingDays(dailyBreakdown, fromDate, toDate)
+
   const successRateCount = await repo.getConversationSuccessRate(agentIds, fromDate, toDate)
   const successRate = totals.totalConversations > 0
     ? Math.round((successRateCount / totals.totalConversations) * 100)
@@ -391,6 +419,8 @@ export async function getAgentAnalyticsRaw(
 
   const realAvgResponseTime = totals.avgResponseTime
   const prevRealAvgResponseTime = prevTotals.avgResponseTime
+
+  dailyBreakdown = fillMissingDays(dailyBreakdown, fromDate, toDate)
 
   const channelBreakdown = await repo.getChannelBreakdown([agentId], fromDate, toDate)
   const returningUsers = await repo.getReturningUsers([agentId], fromDate, toDate)
