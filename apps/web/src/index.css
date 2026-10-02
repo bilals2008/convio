@@ -4,6 +4,7 @@
 @import "./styles/typeset.css";
 
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/google-sans";
 @import "@fontsource-variable/outfit";
 @import "@fontsource-variable/jetbrains-mono";
 
@@ -68,8 +69,11 @@
 
 @theme inline {
     --font-heading: 'Outfit Variable', 'Outfit', sans-serif;
-    --font-sans: 'Inter Variable', 'Inter', sans-serif;
-    --font-body: 'Inter Variable', 'Inter', sans-serif;
+    /* Google Sans is self-hosted via @fontsource-variable (SIL OFL, the family
+       Google released publicly as Google Sans Flex). Inter stays in the stack as
+       the fallback for glyphs Google Sans does not cover. */
+    --font-sans: 'Google Sans Variable', 'Google Sans', 'Inter Variable', 'Inter', sans-serif;
+    --font-body: 'Google Sans Variable', 'Google Sans', 'Inter Variable', 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
