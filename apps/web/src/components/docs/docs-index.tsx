@@ -9,6 +9,7 @@ const BLURBS: Record<string, string> = {
   '': 'What Convio is and how the pieces fit together.',
   'getting-started': 'Account, organization, team, dashboard, and the full vocabulary.',
   agents: 'Concepts, creating, model choice, tools, testing, and statuses.',
+  templates: 'Ready-made system prompts with model, temperature, and tool defaults, applied in one click.',
   'system-prompts': 'The highest-leverage field you own, with worked examples.',
   'knowledge-bases': 'Ground answers in your documents instead of the model’s memory.',
   channels: 'Deploy to the web widget, WhatsApp, Slack, Telegram, Discord, and SMS.',
