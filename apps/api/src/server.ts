@@ -45,6 +45,7 @@ import avatarPresetsRoutes from './modules/avatar-presets/routes.js'
 import statusRoutes from './modules/status/routes.js'
 import auditLogsRoutes from './modules/audit-logs/routes.js'
 import docsRoutes from './modules/docs/routes.js'
+import docsAssistantRoutes from './modules/docs-assistant/routes.js'
 import plansRoutes from './modules/plans/routes.js'
 import adminRoutes from './modules/admin/routes.js'
 import adminAssistantRoutes from './modules/admin-assistant/routes.js'
@@ -125,6 +126,7 @@ async function buildServer() {
   await app.register(statusRoutes, { prefix: '/api' })
   await app.register(auditLogsRoutes, { prefix: '/api' })
   await app.register(docsRoutes, { prefix: '/api' })
+  await app.register(docsAssistantRoutes, { prefix: '/api' })
   await app.register(plansRoutes, { prefix: '/api' })
   await app.register(adminRoutes, { prefix: '/api' })
   await app.register(adminAssistantRoutes, { prefix: '/api' })
