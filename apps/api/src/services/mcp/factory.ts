@@ -38,7 +38,13 @@ export function clientFromServer(
     apiKey: server.apiKey,
   }
   if (server.authType === 'oauth') {
-    config.authProvider = new DbOAuthClientProvider(server.id, callbackBaseUrl)
+    // Must use the same key the OAuth routes persist tokens with, otherwise the
+    // tokens are written encrypted and read back as plaintext (or vice versa).
+    config.authProvider = new DbOAuthClientProvider(
+      server.id,
+      callbackBaseUrl,
+      process.env.MCP_OAUTH_ENCRYPTION_KEY,
+    )
   }
   return new McpClient(config)
 }
