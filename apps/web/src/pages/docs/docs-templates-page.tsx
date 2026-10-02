@@ -79,45 +79,43 @@ function TemplateCard({ template }: { template: AgentTemplate }) {
   const popular = (template.popularity ?? 0) >= 70
 
   return (
-    <article className="flex flex-col rounded-lg border border-border bg-card p-4 transition-colors duration-150 hover:border-foreground/20">
-      <div className="flex items-start justify-between gap-2">
+    <article className="flex min-w-0 flex-col gap-2 rounded-lg border border-border/70 bg-card p-3 transition-colors duration-150 hover:border-foreground/20">
+      <div className="flex min-w-0 items-center gap-2">
         <span
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-md',
+            'flex size-7 shrink-0 items-center justify-center rounded-md',
             categoryColors[template.category]
           )}
         >
-          <Icon aria-hidden="true" className="size-4" />
+          <Icon aria-hidden="true" className="size-3.5" />
         </span>
+        <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{template.name}</h3>
         {popular && (
-          <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10px] text-amber-500">
+          <span className="flex shrink-0 items-center gap-1 font-mono text-[10px] text-amber-500">
             <Flame aria-hidden="true" className="size-3 fill-current" />
             {template.popularity}
           </span>
         )}
       </div>
-
-      <h3 className="mt-3 text-sm font-semibold">{template.name}</h3>
-      <p className="mt-1 text-[13px] leading-5 text-muted-foreground">{template.description}</p>
-
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-        <span className="rounded bg-muted px-1.5 py-0.5">{template.suggestedModel}</span>
-        <span className="rounded bg-muted px-1.5 py-0.5">temp {template.suggestedTemperature}</span>
-        {template.suggestedTools.length > 0 && (
-          <span className="flex items-center gap-1">
-            <Wrench aria-hidden="true" className="size-3" />
-            {template.suggestedTools.length} tool{template.suggestedTools.length > 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      <div className="mt-auto pt-4">
+      <p className="truncate text-xs text-muted-foreground">{template.description}</p>
+      <div className="flex min-w-0 items-center gap-2 border-t border-border/60 pt-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden font-mono text-[10px] text-muted-foreground">
+          <span className="truncate">{template.suggestedModel}</span>
+          <span className="shrink-0">temp {template.suggestedTemperature}</span>
+          {template.suggestedTools.length > 0 && (
+            <span className="flex shrink-0 items-center gap-1">
+              <Wrench aria-hidden="true" className="size-3" />
+              {template.suggestedTools.length}
+            </span>
+          )}
+        </div>
         <Link
           to={`/agents/new?template=${template.id}`}
-          className={cn(buttonVariants({ size: 'sm' }), 'w-full')}
+          aria-label={`Use ${template.name} template`}
+          className={cn(buttonVariants({ variant: 'ghost', size: 'xs' }), 'shrink-0')}
         >
           Use
-          <ArrowRight aria-hidden="true" className="size-3.5" />
+          <ArrowRight aria-hidden="true" className="size-3" />
         </Link>
       </div>
     </article>
@@ -141,23 +139,22 @@ export default function DocsTemplatesPage() {
   return (
     <DocsShell toc={TOC}>
       {/* Hero, in the docs index's voice: kicker, one promise, two ways forward. */}
-      <p className="font-mono text-xs tracking-[0.08em] text-primary uppercase">Docs</p>
-      <h1 className="mt-3 max-w-[34rem] font-heading text-4xl font-bold tracking-tight text-balance sm:text-[2.75rem] sm:leading-[1.1]">
+      <p className="font-mono text-[10px] tracking-[0.08em] text-primary uppercase">Docs</p>
+      <h1 className="mt-2 max-w-[34rem] font-heading text-3xl font-bold tracking-tight text-balance sm:text-4xl sm:leading-[1.1]">
         Start from a proven prompt
       </h1>
-      <p className="mt-4 max-w-[38rem] text-[15px] leading-6.5 text-muted-foreground">
-        {TEMPLATES.length} ready-made agents, each one a full system prompt with the model,
-        temperature, and tools it needs. Apply one in a click — the prompt lands in the create
-        form, ready to edit.
+      <p className="mt-2 max-w-[38rem] text-sm leading-6 text-muted-foreground">
+        {TEMPLATES.length} ready-made agents with prompts, models, and tools — choose one and
+        customize it in the create form.
       </p>
-      <div className="mt-7 flex flex-wrap items-center gap-3">
-        <Link to="/agents/templates" className={cn(buttonVariants({ size: 'lg' }))}>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Link to="/agents/templates" className={cn(buttonVariants({ size: 'sm' }))}>
           <LayoutTemplate aria-hidden="true" className="size-4" />
           Open the gallery
         </Link>
         <Link
           to="/docs/system-prompts"
-          className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
         >
           Writing system prompts
         </Link>
@@ -165,7 +162,7 @@ export default function DocsTemplatesPage() {
 
       <h2
         id="gallery"
-        className="mt-16 scroll-mt-20 font-heading text-lg font-semibold tracking-tight"
+        className="mt-8 scroll-mt-20 font-heading text-base font-semibold tracking-tight"
       >
         Browse the gallery
       </h2>
@@ -183,7 +180,7 @@ export default function DocsTemplatesPage() {
               }}
               aria-pressed={active}
               className={cn(
-                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
                 active
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -198,7 +195,7 @@ export default function DocsTemplatesPage() {
         })}
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:gap-x-6">
         {shown.map((template) => (
           <TemplateCard key={template.id} template={template} />
         ))}
