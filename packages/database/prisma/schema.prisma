@@ -387,6 +387,20 @@ model AgentTool {
   @@index([toolId])
 }
 
+model UsageCounter {
+  id            String @id @default(uuid())
+  orgId         String
+  year          Int
+  month         Int
+  messages      Int    @default(0)
+  conversations Int    @default(0)
+  byAgent       Json?
+  byChannel     Json?
+
+  @@unique([orgId, year, month])
+  @@index([orgId])
+}
+
 model Analytics {
   id                     String   @id @default(uuid())
   date                   DateTime @db.Date
