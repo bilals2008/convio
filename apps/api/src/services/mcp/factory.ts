@@ -1,6 +1,7 @@
 import type { JsonValue } from '@prisma/client/runtime/client'
 import { McpClient, type McpServerConfig } from './index.js'
 import { DbOAuthClientProvider } from './oauth-provider.js'
+import { decryptSecret } from './crypto.js'
 
 function defaultCallbackBaseUrl(): string {
   return process.env.PUBLIC_URL || 'http://localhost:3000'
@@ -9,13 +10,12 @@ function defaultCallbackBaseUrl(): string {
 export interface McpServerLike {
   id: string
   name: string
-  type: string
-  command: string | null
-  args: JsonValue
   url: string | null
   authType: string | null
   headers: JsonValue
   apiKey: string | null
+  clientId: string | null
+  clientSecret: string | null
 }
 
 /**
@@ -29,9 +29,6 @@ export function clientFromServer(
   const config: McpServerConfig = {
     id: server.id,
     name: server.name,
-    type: server.type,
-    command: server.command,
-    args: server.args as string[],
     url: server.url,
     authType: server.authType,
     headers: (server.headers as Record<string, string> | null) ?? undefined,
@@ -44,6 +41,12 @@ export function clientFromServer(
       server.id,
       callbackBaseUrl,
       process.env.MCP_OAUTH_ENCRYPTION_KEY,
+      {
+        clientId: server.clientId || undefined,
+        clientSecret: server.clientSecret
+          ? decryptSecret(server.clientSecret, process.env.MCP_OAUTH_ENCRYPTION_KEY)
+          : undefined,
+      },
     )
   }
   return new McpClient(config)

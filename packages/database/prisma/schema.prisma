@@ -373,9 +373,7 @@ model McpServer {
   id             String           @id @default(uuid())
   organizationId String
   name           String
-  type           String           @default("stdio")
-  command        String?
-  args           Json             @default("[]")
+  type           String           @default("streamable-http")
   url            String?
   authType       String           @default("none") // none | header | oauth
   headers        Json             @default("{}") // custom headers for http transports
